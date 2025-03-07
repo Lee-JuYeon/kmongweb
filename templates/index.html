@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>크몽 메세지 통합 관리</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/chat_room_list.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/chat_list.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/account_button.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/account_modal.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/reply_button.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/reply_modal.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/settings_dropdown.css') }}">
+
+
+
+    <style>
+        /* index.html의 <style> 태그 내부에 추가 */
+            html, body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* 전체 페이지 스크롤바 제거 */
+            height: 100%; /* 화면 전체 높이를 차지 */
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh; /* 전체 화면을 채움 */
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px;
+            background-color: #f5f5f5;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .container {
+            display: flex;
+            flex-grow: 1; /* 남은 공간을 모두 차지 */
+            height: calc(100vh - 60px); /* header의 높이를 제외한 나머지 공간을 차지 */
+            overflow: hidden; /* 컨테이너 내부 스크롤바 제거 */
+        }
+        
+        .header-buttons {
+            display: flex;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        크몽 메세지 통합관리
+        <div class="header-buttons">
+            <button id="account_button" class="account-button">
+                &#128100; 계정관리
+            </button>
+
+            <div class="settings-container">
+                <button id="settings-button" class="settings-button">
+                    ⚙️ 설정
+                </button>
+                <div id="settings-dropdown" class="settings-dropdown">
+                    <a href="#" id="refresh-rate-menu">메세지 갱신주기 설정</a>
+                    <a href="#" id="telegram-bot-menu">텔레그램 봇설정</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 메시지 갱신주기 모달 -->
+    <div id="refresh-rate-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>메시지 갱신주기 설정</h2>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <input type="number" id="refresh-interval" class="refresh-interval" placeholder="몇 초마다 메세지를 갱신할까요?">
+                <button id="set-refresh-rate" class="set-refresh-rate">설정</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 메시지 갱신주기 모달 -->
+    <div class="container">
+        <div id="chat-room-list" class="chat-room-list"></div>
+        <div id="chat-container" class="chat-container">
+            <div id="chat-sync-text" class="chat-sync-text">🔄 이전 대화내역 가져오기</div>
+            <div id="chat-list" class="chat-list"></div>
+            <div class="reply-container">
+                <button id="reply-ai-button" class="reply-ai-button">
+                    <img src="{{ url_for('static', filename='img/image_ai.png') }}" alt="첨부">
+                </button>
+                <textarea id="reply-edittext" class="reply-edittext" placeholder="메시지를 입력하세요..."></textarea>
+                <button id="send-button" class="send-button">보내기</button>
+            </div>            
+        </div>
+    </div>
+
+     <!-- 텔레그램 봇 설정 모달 -->
+     <div id="telegram-bot-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>텔레그램 봇 설정</h2>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="telegram-bot-token" class="telegram-input" placeholder="텔레그램 봇 토큰">
+                <input type="text" id="telegram-chat-id" class="telegram-input" placeholder="텔레그램 채팅 ID">
+                <button id="set-telegram-bot" class="set-telegram-bot">설정</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 계정 관리 모달 -->
+    <div id="account_modal" class="account_modal">
+        <div class="account_modal-content">
+            <div class="account-modal-header-container">
+                <h2>크몽 계정 관리</h2>
+                <span class="close-account_modal">&times;</span>
+            </div>
+            <div class="email-pw-button-container">
+                <textarea id="email" placeholder="📧 이메일"></textarea>
+                <textarea id="password" placeholder="🔒 비밀번호"></textarea>
+                <button class="add-account-button">계정 추가</button>
+            </div>
+            <div id="account-list" class="account-list"></div>
+        </div>
+    </div>
+
+    <div id="reply-modal" class="reply-modal">
+        <div class="reply-modal-content">
+            <div class="reply-modal-header">
+                <h2>AI 자동 답변 선택</h2>
+                <button id="close-reply-modal" class="close-reply-modal">닫기</button>
+            </div>
+            <ul class="reply-list" id="reply-list">
+                <li class="reply-item" data-type="positive_basic">
+                    <div class="reply-item-header">
+                        <span class="reply-item-title">✅ 기본 긍정 답변</span>
+                    </div>
+                    <div class="reply-item-content">
+                        <span class="loading-text">대답을 불러오는 중...</span>
+                    </div>
+                </li>
+                <li class="reply-item" data-type="positive_detailed">
+                    <div class="reply-item-header">
+                        <span class="reply-item-title">✅ 상세 긍정 답변</span>
+                    </div>
+                    <div class="reply-item-content">
+                        <span class="loading-text">대답을 불러오는 중...</span>
+                    </div>
+                </li>
+                <li class="reply-item" data-type="negative_basic">
+                    <div class="reply-item-header">
+                        <span class="reply-item-title">❌ 기본 거절 답변</span>
+                    </div>
+                    <div class="reply-item-content">
+                        <span class="loading-text">대답을 불러오는 중...</span>
+                    </div>
+                </li>
+                <li class="reply-item" data-type="negative_with_margin">
+                    <div class="reply-item-header">
+                        <span class="reply-item-title">⚖️ 여지를 둔 거절</span>
+                    </div>
+                    <div class="reply-item-content">
+                        <span class="loading-text">대답을 불러오는 중...</span>
+                    </div>
+                </li>
+                <li class="reply-item" data-type="alternative_solution">
+                    <div class="reply-item-header">
+                        <span class="reply-item-title">💡 대체 해결책</span>
+                    </div>
+                    <div class="reply-item-content">
+                        <span class="loading-text">대답을 불러오는 중...</span>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+    
+    <!-- JavaScript 파일 로드 - MVVM 패턴 적용 -->
+    <!-- ViewModels -->
+    <script type="module" src="{{ url_for('static', filename='js/viewmodel/account_viewmodel.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/viewmodel/message_viewmodel.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/viewmodel/ai_reply_viewmodel.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/viewmodel/settings_viewmodel.js') }}"></script>
+    
+    <!-- UI Handlers -->
+    <script type="module" src="{{ url_for('static', filename='js/account_ui.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/message_ui.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/ai_reply_modal.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/settings_ui.js') }}"></script>
+    
+    <!-- Main Application -->
+    <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

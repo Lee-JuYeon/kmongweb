@@ -1,0 +1,34 @@
+.chat-room-list {
+    width: 25%;
+    background-color: #e9e9e9;
+    padding: 5px;
+    overflow-y: auto;
+    border-right: 1px solid #bbb;
+}
+
+.chat-room-item {
+    background-color: white;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    cursor: pointer;
+}
+.chat-room-item:hover {
+    background-color: #f0f0f0;
+}
+
+.chat-room-message {
+    color: #000000;
+    font-size: 14px;
+    margin-top: 10px;
+    height: 20px;
+    width: 100%;                  /* 필요에 따라 너비 설정 */
+    display: block;               /* 블록 요소로 처리 */
+    white-space: nowrap;          /* 텍스트를 한 줄로 처리 */
+    overflow: hidden;             /* 넘치는 부분 숨김 */
+    text-overflow: ellipsis;      /* 넘치는 텍스트에 '...' 추가 */
+}
+.chat-room-email {
+    font-size: 14px;
+    font-weight: bold;
+}

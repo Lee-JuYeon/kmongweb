@@ -1,0 +1,14 @@
+.reply-ai-button {
+    background-color: rgb(174, 174, 250);
+    border-color: rgb(255, 255, 255);
+    border-width: 1px;
+    border-radius: 20%;
+    margin-right: 10px;
+    cursor: pointer;
+    padding: auto;
+}
+
+.reply-ai-button img {
+    width: 35px;
+    height: 35px;
+}

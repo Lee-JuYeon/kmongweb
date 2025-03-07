@@ -1,0 +1,85 @@
+.reply-modal {
+    display: none;
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    width: 80vw;  /* 화면 너비의 80%로 설정 */
+    z-index: 1050; /* 모달이 다른 콘텐츠 위에 표시되도록 설정 */
+}
+
+
+.reply-modal-content {
+    text-align: center;
+}
+
+.reply-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.reply-modal-header h2 {
+    margin: 0;
+    font-size: 24px;
+    text-align: center; /* 제목 가운데 정렬 */
+    flex-grow: 1; /* 제목이 가운데에 위치하도록 설정 */
+}
+
+.close-reply-modal {
+    margin-top: 10px;
+    padding: 8px 12px;
+    border: none;
+    background: #ff5c5c;
+    color: white;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+
+.reply-list {
+    list-style: none;
+    padding: 0;
+    margin: 10px 0;
+}
+
+.reply-item {
+    padding: 10px;
+    border: 1px solid #ddd;
+    margin-bottom: 5px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background 0.2s;
+}
+
+.reply-item-header {
+    display: flex;
+    justify-content: flex-start; /* 내용이 왼쪽에 정렬되도록 설정 */
+    align-items: center;
+}
+
+.reply-item-title {
+    text-align: left; /* 텍스트를 왼쪽 정렬 */
+    display: block;   /* 텍스트를 블록 요소로 변경하여 가로로 꽉 차게 만듦 */
+}
+
+.reply-item-content {
+    text-align: left; /* 텍스트를 왼쪽 정렬 */
+    display: block;   /* 텍스트가 블록 요소로 처리되어 전체 너비를 차지하게 함 */
+    background-color: rgb(218, 218, 218);
+    margin-top: 5px;
+    padding: 2px;
+    min-height: 80px;
+    max-height: 100px; /* 최대 높이 100px 설정 */
+    overflow-y: auto;  /* 내용이 넘칠 경우 스크롤 표시 */
+}
+
+
+.reply-item:hover {
+    background: #f5f5f5;
+}
+

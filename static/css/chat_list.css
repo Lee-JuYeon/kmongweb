@@ -1,0 +1,103 @@
+/* 채팅 컨테이너 내부 스타일 */
+#chat-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    overflow: hidden; /* chat-container 내부 스크롤바 제거 */
+}
+
+.chat-sync-text {
+    flex: 0.5; /* 상단 영역 (1 비율) */
+    font-size: 20px;
+    color: #555;
+    text-align: center;
+    cursor: pointer;
+}
+
+
+.chat-list {
+    flex: 8.5; /* 중간 영역 (7 비율) */
+    width: 100%;
+    background-color: #ffffff;
+    padding: 10px;
+    overflow-y: auto;
+}
+
+.reply-container {
+    flex: 1; /* 하단 영역 (2 비율) */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 10px;
+    background-color: #f7f7f7;
+    border-radius: 10px;
+}
+
+.reply-edittext {
+    width: 85%;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+
+.send-button {
+    width: 10%;
+    height: 80%;
+    padding: 10px;
+    margin-right: 30px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+.send-button:hover {
+    background-color: #45a049;
+}
+
+.message-container {
+    display: flex; /* 플렉스박스를 사용하여 아이템 정렬 */
+    justify-content: flex-start; /* 기본적으로 왼쪽 정렬 */
+    width: 100%; /* chat-list 너비만큼 설정 */
+}
+
+.message-item {
+    max-width: 80%; /* 최대 너비는 message-container 너비의 80% */
+    margin-bottom: 5px;
+    border-radius: 10px; /* 둥근 모서리 설정 */
+    word-wrap: break-word;
+    text-align: left;
+}
+
+.message-text {
+    padding: 20px;
+    border-radius: 10px; /* 둥근 모서리 설정 */
+    width: auto; /* 텍스트 길이만큼 너비 자동 설정 */
+    max-width: none; /* 최대 너비 제한 없앰 */
+    word-wrap: break-word;
+    text-align: left;
+}
+
+.message-date {
+    font-size: 12px; /* 폰트 크기를 12px로 설정 */
+    color: #888; /* 연한 회색 텍스트 색상 */
+    text-align: left;
+}
+
+.left {
+    justify-content: flex-start; /* 왼쪽 정렬 */
+}
+
+.right {
+    justify-content: flex-end; /* 오른쪽 정렬 */
+}
+
+.gray-background {
+    background-color: #f0f0f0; /* 회색 배경 */
+}
+
+.yellow-background {
+    background-color: #fff588; /* 노란색 배경 */
+}

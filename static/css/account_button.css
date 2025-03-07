@@ -1,0 +1,13 @@
+.account-button {
+    background-color: yellow;
+    color: black;
+    border: 2px solid black; /* border 두께를 5픽셀로 변경 */
+    border-radius: 20px;
+    padding: 10px 20px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 20px; /* 텍스트 크기 증가 */
+    font-weight: bold; /* 텍스트를 볼드체로 설정 */
+}
