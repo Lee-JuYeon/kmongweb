@@ -145,7 +145,7 @@ class MessageViewModel {
     }
 
     /**
-     * Mark messages as read
+    * 메시지를 읽음 처리하는 새로운 메소드
      * @param {string} chatroomId - Chatroom ID
      * @returns {Promise} - Promise that resolves when messages are marked as read
      * @private
@@ -157,13 +157,24 @@ class MessageViewModel {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(requestData)
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) throw new Error("메시지 읽음 처리에 실패했습니다.");
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // 읽음 처리 후 채팅방 목록 업데이트 (읽지 않은 메시지 카운트 갱신을 위해)
+                return this.loadChatrooms().then(() => data);
+            } else {
+                throw new Error(data.message || "메시지 읽음 처리 실패");
+            }
+        })
         .catch(error => {
             console.error("메시지 읽음 처리 중 오류:", error);
             throw error;
         });
     }
-
+    
     /**
      * Send a message
      * @param {string} text - Message text

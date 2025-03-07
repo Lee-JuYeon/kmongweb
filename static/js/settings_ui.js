@@ -12,6 +12,7 @@ class SettingsUI {
         // DOM elements - Settings dropdown
         this.settingsButton = document.getElementById('settings-button');
         this.settingsDropdown = document.getElementById('settings-dropdown');
+        this.accountManagementMenu = document.getElementById('account-management-menu'); 
         this.refreshRateMenu = document.getElementById('refresh-rate-menu');
         this.telegramBotMenu = document.getElementById('telegram-bot-menu');
 
@@ -97,6 +98,20 @@ class SettingsUI {
             });
         }
         
+        // 계정 관리 메뉴 클릭 이벤트 리스너 추가
+        if (this.accountManagementMenu) {
+            this.accountManagementMenu.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.settingsDropdown.style.display = 'none'; // 드롭다운 닫기
+                
+                // 계정 관리 모달 열기
+                const accountModal = document.getElementById('account_modal');
+                if (accountModal) {
+                    accountModal.style.display = 'flex';
+                }
+            });
+        }
+
         if (this.telegramBotMenu) {
             this.telegramBotMenu.addEventListener('click', (e) => {
                 e.preventDefault();

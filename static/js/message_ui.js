@@ -150,10 +150,19 @@ class MessageUI {
         // Update view model
         this.viewModel.setCurrentChatroom(chatroomId, clientId, adminId);
         
-        // Load messages
-        this.viewModel.loadMessages(chatroomId);
-        
-        // Highlight selected chatroom
+        // 변경: 메시지 로드 전에 먼저 읽음 처리 요청
+        this._markMessagesAsRead(chatroomId)
+            .then(() => {
+                // 읽음 처리 후 메시지 로드
+                return this.viewModel.loadMessages(chatroomId);
+            })
+            .catch(error => {
+                console.error('메시지 읽음 처리 중 오류:', error);
+                // 오류가 발생해도 메시지는 로드
+                this.viewModel.loadMessages(chatroomId);
+            });
+
+        // 채팅방 선택 표시 (UI)
         document.querySelectorAll('.chat-room-item').forEach(item => {
             item.classList.remove('selected');
         });
@@ -240,6 +249,10 @@ class MessageUI {
             this.viewModel.loadChatrooms()
                 .catch(error => console.error('Error auto-refreshing chatrooms:', error));
         }, interval);
+    }
+
+    _markMessagesAsRead(chatroomId) {
+        return this.viewModel.markMessagesAsRead(chatroomId);
     }
 }
 

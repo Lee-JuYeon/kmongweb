@@ -114,14 +114,20 @@ def updateClientUnreadMessageToReadMessage():
     try:
         data = request.json
         chatroom_id = data.get('chatroom_id')
-       
-        # Update unread messages via service
-        success, message = message_service.update_unread_messages(chatroom_id)
-        return jsonify({"success": success, "message": message})
+        
+        if not chatroom_id:
+            return jsonify({"success": False, "message": "채팅방 ID가 필요합니다."}), 400
+                   
+        # 채팅방의 모든 메시지를 읽음 처리
+        success = message_service.update_unread_messages(chatroom_id)
+        
+        if success:
+            return jsonify({"success": True, "message": "메시지가 읽음 처리되었습니다."})
+        else:
+            return jsonify({"success": False, "message": "메시지 읽음 처리에 실패했습니다."})
     
     except Exception as e:
-        print(f"오류 발생: {e}")
-        return jsonify({"error": "서버 내부 오류", "details": str(e)}), 500 
+        return jsonify({"success": False, "message": f"서버 내부 오류: {str(e)}"}), 500
 
 
 # [대화] 웹으로 메세지 보내기

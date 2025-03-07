@@ -57,9 +57,13 @@ class MessageService:
         return True, "메시지가 추가되었습니다."
     
     def update_unread_messages(self, chatroom_id):
-        """Mark all unread messages as read for a specific chatroom"""
-        db_message.update_unread_message(chatroom_id)
-        return True, "읽지 않은 메시지가 업데이트되었습니다."
+        """읽지 않은 메시지를 모두 읽음 상태로 업데이트"""
+        try:
+            # 읽지 않은 메시지(seen == 0)를 읽음 상태(seen == 1)로 업데이트
+            db_message.update_unread_message(chatroom_id)
+            return True
+        except Exception as e:
+            return False
     
     def sync_chat_history(self, chatroom_id, messages):
         """Sync chat history for a specific chatroom by replacing all messages"""

@@ -69,8 +69,8 @@ class LegacyTelegramManager:
         # 연결 상태 체크
         self.check_connection()
     
+    # 텔레그램 API 연결 상태 확인
     def check_connection(self):
-        """텔레그램 API 연결 상태 확인"""
         try:
             url = f"{self.base_url}/getMe"
             response = requests.get(url, timeout=10)
@@ -78,20 +78,19 @@ class LegacyTelegramManager:
             
             if data.get('ok'):
                 bot_info = data.get('result', {})
-                logger.info(f"텔레그램 봇 연결 성공: {bot_info.get('username', '알 수 없음')}")
+                logger.info(f"lagacy_telegram_manager, check_connection // 💡✅ 텔레그램 봇 연결 성공: {bot_info.get('username', '알 수 없음')}")
                 return True
             else:
-                logger.error(f"텔레그램 봇 연결 실패: {data}")
+                logger.error(f"lagacy_telegram_manager, check_connection // 💡❌ 텔레그램 봇 연결 실패: {data}")
                 return False
         except Exception as e:
-            logger.error(f"텔레그램 API 연결 체크 실패: {str(e)}")
+            logger.error(f"lagacy_telegram_manager, check_connection // ⛔ 텔레그램 API 연결 체크 실패: {str(e)}")
             return False
 
-    # 메세지 보내기
+    # 텔레그램으로 메시지 전송
     def send_message(self, email, messageCount, message, parse_mode=None):
-        """텔레그램으로 메시지 전송"""
         if not bot:
-            logger.error("텔레그램 봇이 초기화되지 않았습니다.")
+            logger.error("lagacy_telegram_manager, send_message // ⛔ 텔레그램 봇이 초기화되지 않았습니다.")
             return False
             
         message_text = (
@@ -107,18 +106,17 @@ class LegacyTelegramManager:
                 parse_mode=parse_mode
             )
             
-            logger.info(f"메시지 전송 성공 (ID: {sent_message.message_id}): {message[:30]}...")
+            logger.info(f"lagacy_telegram_manager, send_message // ✅ 메시지 전송 성공 (ID: {sent_message.message_id}): {message[:30]}...")
             return True
         except Exception as e:
-            logger.error(f"메시지 전송 실패: {str(e)}")
+            logger.error(f"lagacy_telegram_manager, send_message // ⛔ 메시지 전송 실패: {str(e)}")
             traceback.print_exc()
             return False
 
-    # 텔레그램으로 새 매세지 알려주기   
+    # 새 메시지 모두 텔레그램으로 전송   
     def sendNewMessageByTelegram(self):  
-        """새 메시지 모두 텔레그램으로 전송"""
         try:
-            logger.info("새 메시지 텔레그램 전송 시작")
+            logger.info("lagacy_telegram_manager, sendNewMessageByTelegram // ▶️ 새 메시지 텔레그램 전송 시작")
             # 전송된 메시지 수 추적
             getMessageCount = 0
 
@@ -154,19 +152,18 @@ class LegacyTelegramManager:
                                     seen=1  # 읽음으로 표시
                                 )
                 except Exception as e:
-                    logger.error(f"계정 {account.get('email', '알 수 없음')} 처리 중 오류: {str(e)}")
+                    logger.error(f"lagacy_telegram_manager, sendNewMessageByTelegram // ⛔ 계정 {account.get('email', '알 수 없음')} 처리 중 오류: {str(e)}")
                     continue
             
-            logger.info(f"총 {sent_count}개의 메시지 전송 완료")
+            logger.info(f"lagacy_telegram_manager, sendNewMessageByTelegram // ✅ 총 {sent_count}개의 메시지 전송 완료")
             return True
         except Exception as e:
-            logger.error(f"메시지 전송 중 오류 발생: {str(e)}")
+            logger.error(f"lagacy_telegram_manager, sendNewMessageByTelegram // ⛔ 메시지 전송 중 오류 발생: {str(e)}")
             traceback.print_exc()
             return False
 
-    # 텔래그램으로 답장하기
+    # 텔레그램 답장 처리 및 DB 업데이트
     def replyByTelegram(self):
-        """텔레그램 답장 처리 및 DB 업데이트"""
         try:
             # 텔레그램에서 답장 확인
             with self.polling_lock:
@@ -223,7 +220,7 @@ class LegacyTelegramManager:
                                 replied_telegram=1        # 텔레그램 답장 표시
                             )
                             
-                            logger.info(f"메시지 상태 업데이트 완료: 테이블 ID {table_id}, 메시지 ID {message.get('idx')}")
+                            logger.info(f"lagacy_telegram_manager, replyByTelegram // ✅ 메시지 상태 업데이트 완료: 테이블 ID {table_id}, 메시지 ID {message.get('idx')}")
                             found = True
                             break
                     
@@ -231,38 +228,38 @@ class LegacyTelegramManager:
                         break
                         
                 except Exception as e:
-                    logger.error(f"테이블 {table_name} 처리 중 오류: {str(e)}")
+                    logger.error(f"lagacy_telegram_manager, replyByTelegram // ⛔ 테이블 {table_name} 처리 중 오류: {str(e)}")
                     continue
             
             if found:
-                logger.info(f"텔레그램 답장 처리 완료: {reply_info['text']}")
+                logger.info(f"lagacy_telegram_manager, replyByTelegram // ✅ 텔레그램 답장 처리 완료: {reply_info['text']}")
                 return True
             else:
-                logger.warning(f"원본 메시지를 찾을 수 없습니다. 메시지 ID: {original_message_id}")
+                logger.warning(f"lagacy_telegram_manager, replyByTelegram // ⛔ 원본 메시지를 찾을 수 없습니다. 메시지 ID: {original_message_id}")
                 return False
                 
         except Exception as e:
-            logger.error(f"텔레그램 답장 처리 중 오류 발생: {str(e)}")
+            logger.error(f"lagacy_telegram_manager, replyByTelegram // ⛔ 텔레그램 답장 처리 중 오류 발생: {str(e)}")
             traceback.print_exc()
             return False
         
+    # 텔레그램 답장 모니터링 시작
     def prepareObserving(self):
-        """텔레그램 답장 모니터링 시작"""
         try:
             # 답장 처리 폴링 시작
             def on_reply_received(reply_info):
                 try:
                     self.replyByTelegram()
                 except Exception as e:
-                    logger.error(f"답장 처리 콜백 오류: {str(e)}")
+                    logger.error(f"lagacy_telegram_manager, prepareObserving // ⛔ 답장 처리 콜백 오류: {str(e)}")
                     traceback.print_exc()
             
             # 답장 폴링 시작 (10초 간격으로 변경 - 더 넓은 간격으로 설정해 충돌 가능성 감소)
             self.start_reply_polling(interval=10, callback=on_reply_received)
-            logger.info("텔레그램 답장 모니터링 시작")
+            logger.info("lagacy_telegram_manager, prepareObserving // ▶️ 텔레그램 답장 모니터링 시작")
             return True
         except Exception as e:
-            logger.error(f"텔레그램 모니터링 설정 중 오류: {str(e)}")
+            logger.error(f"lagacy_telegram_manager, prepareObserving // ⛔ 텔레그램 모니터링 설정 중 오류: {str(e)}")
             traceback.print_exc()
             return False
 
