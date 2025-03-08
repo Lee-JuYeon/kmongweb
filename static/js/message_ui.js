@@ -151,7 +151,7 @@ class MessageUI {
         this.viewModel.setCurrentChatroom(chatroomId, clientId, adminId);
         
         // 변경: 메시지 로드 전에 먼저 읽음 처리 요청
-        this._markMessagesAsRead(chatroomId)
+        this.viewModel.markMessagesAsRead(chatroomId)
             .then(() => {
                 // 읽음 처리 후 메시지 로드
                 return this.viewModel.loadMessages(chatroomId);
@@ -249,10 +249,6 @@ class MessageUI {
             this.viewModel.loadChatrooms()
                 .catch(error => console.error('Error auto-refreshing chatrooms:', error));
         }, interval);
-    }
-
-    _markMessagesAsRead(chatroomId) {
-        return this.viewModel.markMessagesAsRead(chatroomId);
     }
 }
 

@@ -135,7 +135,8 @@ class MessageViewModel {
             .then(data => {
                 this.messages = data;
                 this.notifyMessageObservers();
-                this._markMessagesAsRead(chatroomId);
+                // 여기서 this._markMessagesAsRead(chatroomId)를 호출했지만, 해당 메소드가 없음
+                // 대신 markMessagesAsRead를 사용
                 return data;
             })
             .catch(error => {
@@ -145,10 +146,9 @@ class MessageViewModel {
     }
 
     /**
-    * 메시지를 읽음 처리하는 새로운 메소드
+    * 메시지를 읽음 처리하는 메소드
      * @param {string} chatroomId - Chatroom ID
      * @returns {Promise} - Promise that resolves when messages are marked as read
-     * @private
      */
     markMessagesAsRead(chatroomId) {
         const requestData = { chatroom_id: chatroomId };
