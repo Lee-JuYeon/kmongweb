@@ -1,5 +1,7 @@
 from flask import Blueprint, request, jsonify
 from datetime import date
+import time
+import threading  # threading 모듈 추가
 
 from static.js.service.message_service import MessageService
 from static.js.service.account_service import AccountService
@@ -192,6 +194,15 @@ def start_telegram_id_check():
                 'success': False,
                 'message': '텔레그램 봇 토큰이 필요합니다.'
             }), 400
+        
+        # 기존 인스턴스 중지 (있다면)
+        try:
+            old_telegram = get_telegram_instance()
+            if old_telegram:
+                old_telegram.stop_bot()
+                time.sleep(2)  # 확실히 중지될 시간 부여
+        except:
+            pass
         
         # 임시로 토큰 설정
         settings_service.update_telegram_settings(token, '')

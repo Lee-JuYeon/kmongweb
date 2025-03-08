@@ -71,6 +71,15 @@ class LegacyTelegramManager:
             return False
         
         try:
+            # 기존 봇 인스턴스가 있으면 명시적으로 정리
+            if bot:
+                try:
+                    bot.stop_polling()
+                    time.sleep(3)  # 봇이 확실히 정리될 시간 부여
+                except:
+                    pass
+
+            # 새 봇 인스턴스 생성
             bot = telebot.TeleBot(self.token)
             
             # 명령어 핸들러 등록
@@ -135,10 +144,20 @@ class LegacyTelegramManager:
         
     # 채팅 ID를 얻기 위해 봇을 시작하는 메소드. 이 메소드는 별도의 스레드에서 실행되어야 함
     def start_bot_for_id_check(self):
-        if not bot:
-            if not self._initialize_bot():
-                logger.error("legacy_telegram_manager, start_bot_for_id_check // ⛔ 봇 초기화 실패")
-                return False
+        global bot
+
+        # 기존에 실행 중인 봇 종료 확실히 처리
+        try:
+            if bot:
+                bot.stop_polling()
+                time.sleep(2)  # 종료가 완료될 시간 부여
+        except:
+            pass
+        
+        # 봇 새로 초기화
+        if not self._initialize_bot():
+            logger.error("legacy_telegram_manager, start_bot_for_id_check // ⛔ 봇 초기화 실패")
+            return False
         
         try:
             logger.info("legacy_telegram_manager, start_bot_for_id_check // ▶️ 텔레그램 봇 ID 확인 모드 시작")
@@ -155,12 +174,15 @@ class LegacyTelegramManager:
         if bot:
             try:
                 bot.stop_polling()
+                time.sleep(3)  # 충분한 정리 시간
+                bot = None  # 인스턴스 참조 제거
                 logger.info("legacy_telegram_manager, stop_bot // ⏹️ 텔레그램 봇 폴링 중지")
                 return True
             except Exception as e:
                 logger.error(f"legacy_telegram_manager, stop_bot // ⛔ 봇 중지 실패: {str(e)}")
                 return False
-        return False
+        return True  # 봇이 없으면 이미 중지된 것으로 간주
+
 
     # 텔레그램으로 메시지 전송
     def send_message(self, email, messageCount, message, parse_mode=None):
