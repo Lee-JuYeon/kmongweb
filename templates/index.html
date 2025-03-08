@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/reply_button.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/reply_modal.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/settings_dropdown.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/telegram_modal.css') }}">
 
 
 
@@ -101,17 +102,28 @@
         </div>
     </div>
 
-     <!-- 텔레그램 봇 설정 모달 -->
-     <div id="telegram-bot-modal" class="modal">
+    <!-- 텔레그램 봇 설정 모달 -->
+    <div id="telegram-bot-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
                 <h2>텔레그램 봇 설정</h2>
                 <span class="close-modal">&times;</span>
             </div>
             <div class="modal-body">
-                <input type="text" id="telegram-bot-token" class="telegram-input" placeholder="텔레그램 봇 토큰">
-                <input type="text" id="telegram-chat-id" class="telegram-input" placeholder="텔레그램 채팅 ID">
-                <button id="set-telegram-bot" class="set-telegram-bot">설정</button>
+                <div class="input-group">
+                    <label for="telegram-bot-token">봇 토큰 (BotFather에서 발급 받은 토큰)</label>
+                    <input type="text" id="telegram-bot-token" class="telegram-input" placeholder="텔레그램 봇 토큰">
+                </div>
+                <div class="input-group">
+                    <label for="telegram-chat-id">Chat ID</label>
+                    <input type="text" id="telegram-chat-id" class="telegram-input" placeholder="텔레그램 채팅 ID">
+                </div>
+                <div class="button-group">
+                    <button id="check-telegram-id" class="telegram-button">Chat ID 자동 확인</button>
+                    <button id="test-telegram-bot" class="telegram-button">테스트 메시지 보내기</button>
+                </div>
+                <div id="telegram-status-message" class="status-message"></div>
+                <button id="set-telegram-bot" class="set-telegram-bot">설정 저장</button>
             </div>
         </div>
     </div>

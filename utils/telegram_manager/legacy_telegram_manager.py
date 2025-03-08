@@ -5,11 +5,12 @@ import logging
 import threading
 import time
 import traceback
-from dotenv import load_dotenv
 from datetime import datetime
 from utils.kmong_checker import dbLib
 from utils.kmong_checker import kmongLib
 from utils.kmong_checker import db_message
+from static.js.service.settings_service import SettingsService
+
 
 
 # 로깅 설정
@@ -19,58 +20,103 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-
-# 환경 변수 로드
-load_dotenv()
-telebot_token = os.getenv('telebot_token')
-telebot_chat_id = os.getenv('telebot_chat_id')
-
 # 전역 봇 인스턴스
 bot = None
-
-# 봇 인스턴스 초기화 함수 (제어를 위해 별도 함수로 분리)
-def initialize_bot():
-    global bot
-    if bot is None:
-        try:
-            bot = telebot.TeleBot(telebot_token)
-            logger.info("텔레그램 봇 초기화 성공")
-        except Exception as e:
-            logger.error(f"텔레그램 봇 초기화 실패: {str(e)}")
-            return None
-    return bot
-
-# 초기화
-bot = initialize_bot()
-
-
-kmongLibInstance = kmongLib.KmongMessage()
-
-
+ 
 class LegacyTelegramManager:
     _instance = None
     
     @classmethod
-    def get_instance(cls):
+    def get_instance(cls, token=None, chat_id=None):
+        """
+        싱글톤 인스턴스 반환 메소드
+        설정 값이 변경되었을 경우 인스턴스를 재생성
+        """
         if cls._instance is None:
-            cls._instance = cls()
+            cls._instance = cls(token, chat_id)
+        elif token and chat_id and (cls._instance.token != token or cls._instance.chat_id != chat_id):
+            # 설정이 변경된 경우 인스턴스 재생성
+            cls._instance = cls(token, chat_id)
         return cls._instance
     
-    def __init__(self):
-        self.base_url = f"https://api.telegram.org/bot{telebot_token}"
+    # 텔레그램 매니저 초기화
+    def __init__(self, token=None, chat_id=None):
+        # 설정 서비스에서 값을 불러오기
+        settings_service = SettingsService()
+        settings = settings_service.get_settings()
+        
+        # 인자 값이 없으면 설정에서 불러오기
+        self.token = token or settings.get('telegram', {}).get('botToken', '')
+        self.chat_id = chat_id or settings.get('telegram', {}).get('chatId', '')
+        
+        self.base_url = f"https://api.telegram.org/bot{self.token}" if self.token else ""
         self.last_update_id = 0  # 마지막으로 처리한 update_id
         self.polling_thread = None
         self.stop_polling = False
         self.polling_lock = threading.Lock()
-        
-        # 폴링 상태 표시용
         self.is_polling = False
         
-        # 연결 상태 체크
-        self.check_connection()
+        # 봇 초기화
+        self._initialize_bot()
+        
+        # kmongLib 인스턴스 생성
+        self.kmongLibInstance = kmongLib.KmongMessage()
     
+    # 봇 인스턴스 초기화 메소드
+    def _initialize_bot(self):
+        global bot
+        
+        if not self.token:
+            logger.warning("legacy_telegram_manager, _initialize_bot // ⚠️ 토큰이 설정되지 않았습니다.")
+            return False
+        
+        try:
+            bot = telebot.TeleBot(self.token)
+            
+            # 명령어 핸들러 등록
+            @bot.message_handler(commands=['start', 'help'])
+            def handle_start_help(message):
+                bot.reply_to(message, 
+                    "안녕하세요! 크몽 메시지 관리 봇입니다.\n"
+                    "/help - 도움말 보기\n"
+                    "/id - 현재 채팅 ID 확인하기\n"
+                    "/test - 테스트 메시지 보내기")
+            
+            @bot.message_handler(commands=['id'])
+            def handle_id_command(message):
+                bot.reply_to(message, f"현재 채팅 ID: {message.chat.id}")
+                logger.info(f"ID 요청: 채팅 ID {message.chat.id}")
+                
+                # 클립보드에 복사 안내 메시지
+                bot.send_message(message.chat.id, "이 ID를 크몽 메시지 관리 앱의 '텔레그램 봇 설정'에 입력하세요.")
+            
+            @bot.message_handler(commands=['test'])
+            def handle_test_command(message):
+                bot.reply_to(message, "테스트 메시지입니다.")
+                logger.info(f"테스트 메시지 전송 - 채팅 ID: {message.chat.id}")
+            
+            @bot.message_handler(func=lambda message: True)
+            def echo_all(message):
+                # 모든 메시지 로깅
+                logger.info(f"메시지 수신 - 채팅 ID: {message.chat.id}, 내용: {message.text[:30]}...")
+                
+                # 일반 메시지인 경우 bot_id 안내
+                if not message.text.startswith('/'):
+                    bot.reply_to(message, f"메시지를 받았습니다. 이 채팅의 ID는 {message.chat.id}입니다.")
+            
+            logger.info("legacy_telegram_manager, _initialize_bot // ✅ 텔레그램 봇 초기화 완료")
+            return True
+        except Exception as e:
+            logger.error(f"legacy_telegram_manager, _initialize_bot // ⛔ 텔레그램 봇 초기화 실패: {str(e)}")
+            traceback.print_exc()
+            return False
+
     # 텔레그램 API 연결 상태 확인
     def check_connection(self):
+        if not self.token:
+            logger.warning("legacy_telegram_manager, check_connection // ⚠️ 토큰이 설정되지 않았습니다.")
+            return False
+            
         try:
             url = f"{self.base_url}/getMe"
             response = requests.get(url, timeout=10)
@@ -78,14 +124,43 @@ class LegacyTelegramManager:
             
             if data.get('ok'):
                 bot_info = data.get('result', {})
-                logger.info(f"lagacy_telegram_manager, check_connection // 💡✅ 텔레그램 봇 연결 성공: {bot_info.get('username', '알 수 없음')}")
+                logger.info(f"legacy_telegram_manager, check_connection // 💡✅ 텔레그램 봇 연결 성공: {bot_info.get('username', '알 수 없음')}")
                 return True
             else:
-                logger.error(f"lagacy_telegram_manager, check_connection // 💡❌ 텔레그램 봇 연결 실패: {data}")
+                logger.error(f"legacy_telegram_manager, check_connection // 💡❌ 텔레그램 봇 연결 실패: {data}")
                 return False
         except Exception as e:
-            logger.error(f"lagacy_telegram_manager, check_connection // ⛔ 텔레그램 API 연결 체크 실패: {str(e)}")
+            logger.error(f"legacy_telegram_manager, check_connection // ⛔ 텔레그램 API 연결 체크 실패: {str(e)}")
             return False
+        
+    # 채팅 ID를 얻기 위해 봇을 시작하는 메소드. 이 메소드는 별도의 스레드에서 실행되어야 함
+    def start_bot_for_id_check(self):
+        if not bot:
+            if not self._initialize_bot():
+                logger.error("legacy_telegram_manager, start_bot_for_id_check // ⛔ 봇 초기화 실패")
+                return False
+        
+        try:
+            logger.info("legacy_telegram_manager, start_bot_for_id_check // ▶️ 텔레그램 봇 ID 확인 모드 시작")
+            # 비동기 폴링 시작
+            threading.Thread(target=bot.infinity_polling, kwargs={'timeout': 10, 'long_polling_timeout': 5}, daemon=True).start()
+            return True
+        except Exception as e:
+            logger.error(f"legacy_telegram_manager, start_bot_for_id_check // ⛔ 봇 시작 실패: {str(e)}")
+            traceback.print_exc()
+            return False
+    
+    # 봇 폴링 중지
+    def stop_bot(self):
+        if bot:
+            try:
+                bot.stop_polling()
+                logger.info("legacy_telegram_manager, stop_bot // ⏹️ 텔레그램 봇 폴링 중지")
+                return True
+            except Exception as e:
+                logger.error(f"legacy_telegram_manager, stop_bot // ⛔ 봇 중지 실패: {str(e)}")
+                return False
+        return False
 
     # 텔레그램으로 메시지 전송
     def send_message(self, email, messageCount, message, parse_mode=None):
@@ -93,23 +168,28 @@ class LegacyTelegramManager:
             logger.error("lagacy_telegram_manager, send_message // ⛔ 텔레그램 봇이 초기화되지 않았습니다.")
             return False
             
+        if not self.chat_id:
+            logger.error("legacy_telegram_manager, send_message // ⛔ 채팅 ID가 설정되지 않았습니다.")
+            return False
+            
         message_text = (
             f"🔔 Kmong 새 메세지 알림 🔔\n\n"
             f"✉️ {email}\n"
             f"💬 ({messageCount}): {message}"
         )
+        
         try:
             # 메시지 전송
             sent_message = bot.send_message(
-                chat_id=telebot_chat_id,
+                chat_id=self.chat_id,
                 text=message_text,
                 parse_mode=parse_mode
             )
             
-            logger.info(f"lagacy_telegram_manager, send_message // ✅ 메시지 전송 성공 (ID: {sent_message.message_id}): {message[:30]}...")
+            logger.info(f"legacy_telegram_manager, send_message // ✅ 메시지 전송 성공 (ID: {sent_message.message_id}): {message[:30]}...")
             return True
         except Exception as e:
-            logger.error(f"lagacy_telegram_manager, send_message // ⛔ 메시지 전송 실패: {str(e)}")
+            logger.error(f"legacy_telegram_manager, send_message // ⛔ 메시지 전송 실패: {str(e)}")
             traceback.print_exc()
             return False
 
@@ -121,7 +201,7 @@ class LegacyTelegramManager:
             getMessageCount = 0
 
             # 1. 모든 테이브의 데이터를 가져오기 위해 user_id부터 접근                                                                                                                                                                                                                                                                                                                                                                                                                
-            accountList = kmongLibInstance.readAccountList()
+            accountList = self.kmongLibInstance.readAccountList()
             sent_count = 0
             
             for account in accountList:
@@ -174,13 +254,13 @@ class LegacyTelegramManager:
                 return False
             
             # 로그 출력
-            logger.info("=" * 50)
+            logger.info("=" * 20)
             logger.info("텔레그램 답장이 감지되었습니다!")
             logger.info(f"메시지 ID: {reply_info['message_id']}")
             logger.info(f"보낸 사람: {reply_info['first_name']} {reply_info['last_name']} (@{reply_info['username']})")
             logger.info(f"내용: {reply_info['text']}")
             logger.info(f"원본 메시지 ID: {reply_info['reply_to_message_id']}")
-            logger.info("=" * 50)
+            logger.info("=" * 20)
             
             # 원본 메시지 ID
             original_message_id = reply_info['reply_to_message_id']
@@ -454,70 +534,6 @@ class LegacyTelegramManager:
         thread.start()
         return True
 
-
-
-#############################################   
-    # 추출한 대화방 아이디, tele_chat_is_send를 데이터베이스에 업데이트합니다.
-    def update_chat_id_in_db(self, user_id, tele_chat_room_id, tele_chat_is_send):
-        """
-        추출한 대화방 아이디, tele_chat_is_send를 데이터베이스에 업데이트합니다.
-        """
-        try:
-            # 데이터베이스에 chat_id 저장 또는 업데이트
-            dbLib.update_tele_chat_room_id(user_id, tele_chat_room_id, tele_chat_is_send)
-            logger.info(f"대화방 아이디 업데이트 완료: {tele_chat_room_id}")
-            return True
-        except Exception as e:
-            logger.error(f"대화방 아이디 업데이트 실패: {str(e)}")
-            traceback.print_exc()
-            return False
-
-
-    # 텔레봇으로 메세지 내역 받아와 최근 대화방 아이디값과 tele_chat_is_send(텔레그램에 매세지 보냈는지?) 갱신하기
-    def sendUnReadMessagesViaTelebot(self):
-        """
-        텔레그램 봇api를 사용하여 메시지 내역을 가져온다
-        가져온 메세지 내역에서 최근 대화방 아이디를 추출한다.
-        추출한 대화방 아이디를 데이터베이스에 저장한다
-        """
-        try:
-            if not bot:
-                logger.error("텔레그램 봇이 초기화되지 않았습니다.")
-                return False
-                
-            unReadMessageListFromDB = self.getUnreadMessageListFromDB()        
-
-            sent_count = 0
-            # 📌 새로운 메시지가 있으면 텔레그램으로 전송
-            if unReadMessageListFromDB:
-                for unReadMessage in unReadMessageListFromDB:
-                    message_text = (
-                        "🔔 Kmong 새 메시지 알림 🔔\n"
-                        f"✉️ {unReadMessage['userid']}\n"
-                        f"💬 ({unReadMessage['message_count']}): {unReadMessage['message_content']}\n"
-                    )
-
-                    try:
-                        # 텔레그램 메시지 전송
-                        result = bot.send_message(telebot_chat_id, message_text)
-                        
-                        if result:
-                            sent_count += 1
-                            # 메시지 전송 후 DB 업데이트 (chatroom_id, tele_chat_is_send) 1 == 보냄, 0 == 안보냄
-                            self.update_chat_id_in_db(unReadMessage['userid'], telebot_chat_id, 1)
-                    except Exception as e:
-                        logger.error(f"메시지 전송 실패: {str(e)}")
-                
-                logger.info(f"{sent_count}개의 메시지가 텔레그램으로 전송되었습니다.")
-                return True
-            else:
-                logger.info("전송할 새 메시지가 없습니다.")
-                return False
-        except Exception as e:
-            logger.error(f"메시지 전송 중 오류 발생: {str(e)}")
-            traceback.print_exc()
-            return False
-           
     def sendDummyMessage(self):
         """
         테스트용 더미 메시지 전송
@@ -528,13 +544,13 @@ class LegacyTelegramManager:
             
         try:
             message_text = (
-                "🔔 Kmong 새 메시지 알림 🔔\n"
+                "🔔 Kmong 테스트 메시지 🔔\n"
                 f"✉️ test@test.com\n"
-                f"💬 (99): 테스트용 메세지입니다. 시간: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} \n"
+                f"💬 (0): 테스트용 메세지입니다. 시간: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} \n"
             )
 
             # 텔레그램 메시지 전송 및 결과 확인
-            sent_message = bot.send_message(telebot_chat_id, message_text)
+            sent_message = bot.send_message(self.chat_id, message_text)
             logger.info(f"테스트 메시지 전송 성공: {sent_message.message_id}")
             return True
         except Exception as e:

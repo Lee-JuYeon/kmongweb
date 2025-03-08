@@ -1,8 +1,8 @@
 import os
 import json
+import logging
 
 class SettingsService:
-    """Settings Service class for handling application settings"""
     
     def __init__(self):
         """Initialize SettingsService with default settings"""
@@ -18,6 +18,8 @@ class SettingsService:
                 'chatId': ''
             }
         }
+        # 로깅 설정
+        self.logger = logging.getLogger(__name__)
         self.settings = self._load_settings()
         
     def _load_settings(self):
@@ -25,15 +27,38 @@ class SettingsService:
         try:
             if os.path.exists(self.settings_file):
                 with open(self.settings_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    loaded_settings = json.load(f)
+                    # 설정이 모든 필수 키를 가지고 있는지 확인하고 없으면 기본값으로 보완
+                    self._validate_and_complete_settings(loaded_settings)
+                    return loaded_settings
             else:
                 # 파일이 없으면 기본 설정 저장 후 반환
                 self._save_settings(self.default_settings)
                 return self.default_settings
         except Exception as e:
-            print(f"설정 로드 중 오류: {e}")
+            self.logger.error(f"설정 로드 중 오류: {e}")
             return self.default_settings
-            
+
+    def _validate_and_complete_settings(self, settings):
+        """설정에 필요한 키가 모두 있는지 확인하고 없으면 기본값으로 채움"""
+        # refreshInterval 체크
+        if 'refreshInterval' not in settings:
+            settings['refreshInterval'] = self.default_settings['refreshInterval']
+        else:
+            for key in self.default_settings['refreshInterval']:
+                if key not in settings['refreshInterval']:
+                    settings['refreshInterval'][key] = self.default_settings['refreshInterval'][key]
+        
+        # telegram 설정 체크
+        if 'telegram' not in settings:
+            settings['telegram'] = self.default_settings['telegram']
+        else:
+            for key in self.default_settings['telegram']:
+                if key not in settings['telegram']:
+                    settings['telegram'][key] = self.default_settings['telegram'][key]    
+
+        return settings
+  
     def _save_settings(self, settings):
         """Save settings to file"""
         try:
@@ -86,3 +111,18 @@ class SettingsService:
         except Exception as e:
             print(f"텔레그램 설정 업데이트 중 오류: {e}")
             return False, f'텔레그램 설정 업데이트에 실패했습니다: {str(e)}'
+        
+
+    def get_telegram_settings(self):
+        """텔레그램 설정 가져오기"""
+        return {
+            'botToken': self.settings['telegram'].get('botToken', ''),
+            'chatId': self.settings['telegram'].get('chatId', '')
+        }
+        
+    def check_telegram_settings_valid(self):
+        """현재 텔레그램 설정이 유효한지 확인"""
+        token = self.settings['telegram'].get('botToken', '')
+        chat_id = self.settings['telegram'].get('chatId', '')
+            
+        return bool(token and chat_id)

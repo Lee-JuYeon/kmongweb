@@ -1,0 +1,95 @@
+/* 텔레그램 설정 모달 스타일 */
+.input-group {
+    margin-bottom: 15px;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #555;
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.telegram-button {
+    padding: 8px 15px;
+    background-color: #4A95E8;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    flex: 1;
+    font-size: 14px;
+}
+
+.telegram-button:hover {
+    background-color: #3A85D8;
+}
+
+.status-message {
+    padding: 10px;
+    margin-bottom: 15px;
+    border-radius: 4px;
+    display: none;
+}
+
+.status-message:not(:empty) {
+    display: block;
+}
+
+.telegram-status-info {
+    background-color: #e3f2fd;
+    color: #0d47a1;
+    border: 1px solid #bbdefb;
+}
+
+.telegram-status-success {
+    background-color: #e8f5e9;
+    color: #1b5e20;
+    border: 1px solid #c8e6c9;
+}
+
+.telegram-status-error {
+    background-color: #ffebee;
+    color: #b71c1c;
+    border: 1px solid #ffcdd2;
+}
+
+/* 텔레그램 입력 필드 개선 */
+.telegram-input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 5px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.telegram-input:focus {
+    border-color: #4A95E8;
+    outline: none;
+    box-shadow: 0 0 5px rgba(74, 149, 232, 0.3);
+}
+
+/* 저장 버튼 강조 */
+.set-telegram-bot {
+    margin-top: 10px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 12px;
+    width: 100%;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.set-telegram-bot:hover {
+    background-color: #45a049;
+}

@@ -22,7 +22,25 @@ settings_service = SettingsService()
 chatGPT = GPTManager()
 selenium = SeleniumManager()
 dummy = DummySingleton()
-telegram = LegacyTelegramManager()
+
+
+# 텔레그램 봇 초기화
+telegram_bot = None  # 지연 초기화를 위해 None으로 초기화
+
+def get_telegram_instance():
+    """텔레그램 인스턴스 가져오기 (필요시 초기화)"""
+    global telegram_bot
+    
+    # 설정 가져오기
+    settings = settings_service.get_settings()
+    token = settings.get('telegram', {}).get('botToken', '')
+    chat_id = settings.get('telegram', {}).get('chatId', '')
+    
+    # 인스턴스가 없거나 설정이 변경되었으면 새로 생성
+    if telegram_bot is None:
+        telegram_bot = LegacyTelegramManager.get_instance(token, chat_id)
+    
+    return telegram_bot
 
 # 엔드포인트: 설정 관련
 @settings_bp.route('/loadSettings')
@@ -90,6 +108,9 @@ def update_telegram_settings():
             
             if update_result:
                 try:
+                    # 인스턴스 가져오기
+                    telegram = get_telegram_instance()
+                    
                     # 테스트 메시지 전송
                     telegram.send_message(
                         email="시스템", 
@@ -130,13 +151,16 @@ def test_telegram_message():
         data = request.json
         test_message = data.get('message', '🔔 이것은 테스트 메시지입니다.')
         
+        # 인스턴스 가져오기
+        telegram = get_telegram_instance()
+        
         # 메시지 전송
         result = telegram.send_message(
             email="테스트",
             messageCount=0,
             message=test_message
         )
-        
+
         if result:
             return jsonify({
                 'success': True,
@@ -155,6 +179,67 @@ def test_telegram_message():
             'message': f'텔레그램 테스트 메시지 전송 중 오류가 발생했습니다: {str(e)}'
         }), 500
 
+@settings_bp.route('/startTelegramIdCheck', methods=['POST'])
+def start_telegram_id_check():
+    """텔레그램 ChatID 확인 모드 시작"""
+    try:
+        # 요청에서 봇 토큰 가져오기
+        data = request.json
+        token = data.get('token')
+        
+        if not token:
+            return jsonify({
+                'success': False,
+                'message': '텔레그램 봇 토큰이 필요합니다.'
+            }), 400
+        
+        # 임시로 토큰 설정
+        settings_service.update_telegram_settings(token, '')
+        
+        # 인스턴스 가져오기 (토큰만 있는 상태로)
+        telegram = get_telegram_instance()
+        
+        # ID 확인 모드 시작 (별도 스레드에서)
+        def id_check_thread():
+            telegram.start_bot_for_id_check()
+        
+        threading.Thread(target=id_check_thread, daemon=True).start()
+        
+        return jsonify({
+            'success': True,
+            'message': '텔레그램 봇이 ID 확인 모드로 시작되었습니다. 텔레그램 앱에서 봇을 찾아 메시지를 보내고 "/id" 명령어를 실행하세요.'
+        })
+    
+    except Exception as e:
+        print(f"텔레그램 ID 확인 모드 시작 중 오류: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'텔레그램 ID 확인 모드 시작 중 오류가 발생했습니다: {str(e)}'
+        }), 500
+    
+@settings_bp.route('/stopTelegramIdCheck', methods=['POST'])
+def stop_telegram_id_check():
+    """텔레그램 ChatID 확인 모드 중지"""
+    try:
+        # 인스턴스 가져오기
+        telegram = get_telegram_instance()
+        
+        # 봇 중지
+        telegram.stop_bot()
+        
+        return jsonify({
+            'success': True,
+            'message': '텔레그램 ID 확인 모드가 중지되었습니다.'
+        })
+    
+    except Exception as e:
+        print(f"텔레그램 ID 확인 모드 중지 중 오류: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'텔레그램 ID 확인 모드 중지 중 오류가 발생했습니다: {str(e)}'
+        }), 500
+
+
 @settings_bp.route('/startReplyPolling', methods=['POST'])
 def start_reply_polling():
     """텔레그램 답장 폴링 시작"""
@@ -163,13 +248,14 @@ def start_reply_polling():
         data = request.json
         interval = data.get('interval', 5)
         
-        # 답장 폴링 시작
-        from app import replyByTelegram
+        # 텔레그램 인스턴스 가져오기
+        telegram = get_telegram_instance()
         
+        # 답장 폴링 시작
         def on_reply_callback(reply_info):
             """답장 수신 시 호출될 콜백 함수"""
             try:
-                replyByTelegram()
+                telegram.replyByTelegram()
             except Exception as e:
                 print(f"답장 처리 콜백 오류: {str(e)}")
         
@@ -187,10 +273,14 @@ def start_reply_polling():
             'message': f'텔레그램 답장 폴링 시작 중 오류가 발생했습니다: {str(e)}'
         }), 500
 
+
 @settings_bp.route('/stopReplyPolling', methods=['POST'])
 def stop_reply_polling():
     """텔레그램 답장 폴링 중지"""
     try:
+        # 텔레그램 인스턴스 가져오기
+        telegram = get_telegram_instance()
+        
         telegram.stop_reply_polling()
         
         return jsonify({

@@ -4,6 +4,7 @@ import logging
 import threading
 import time
 import requests
+import json
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -14,35 +15,50 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-
-# 환경 변수 로드
-load_dotenv()
-telebot_token = os.getenv('telebot_token')
-telebot_chat_id = os.getenv('telebot_chat_id')
-
-
-# 텔레그램 봇 초기화
-bot = telebot.TeleBot(telebot_token)
-
-
 class TelegramManager:
     _instance = None
     
-   
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
     
-    def __init__(self, token=None, chat_id=None):
-        # 봇 인스턴스와 기타 변수 초기화
+    def __init__(self):
+
+         # 설정 파일에서 토큰과 채팅 ID 로드
+        self.settings_file = 'settings.json'
+        self.settings = self._load_settings()
+
+         # 봇 토큰과 채팅 ID 설정
+        self.token = self.settings.get('telegram', {}).get('botToken', '')
+        self.chat_id = self.settings.get('telegram', {}).get('chatId', '')
+
+            # 봇 인스턴스와 기타 변수 초기화
         self.bot = None
-        self.base_url = f"https://api.telegram.org/bot{telebot_token}"
+        self.base_url = None
         self.last_update_id = 0
         self.polling_thread = None
         self.stop_polling = False
         
-       
+        # 토큰이 설정되어 있으면 봇 초기화
+        if self.token:
+            self.initialize()
+        
+    # 설정 파일에서 설정 로드  
+    def _load_settings(self):
+        try:
+            if os.path.exists(self.settings_file):
+                with open(self.settings_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            else:
+                return {'telegram': {'botToken': '', 'chatId': ''}}
+        except Exception as e:
+            logger.error(f"설정 로드 중 오류: {str(e)}")
+            return {'telegram': {'botToken': '', 'chatId': ''}}
     
-    
+    # 봇 명령어 핸들러를 등록합니다.
     def register_handlers(self):
-        """봇 명령어 핸들러를 등록합니다."""
         @self.bot.message_handler(commands=['start', 'help'])
         def handle_start_help(message):
             self.bot.reply_to(message, 

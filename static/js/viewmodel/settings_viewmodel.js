@@ -1,15 +1,18 @@
-/**
- * Settings ViewModel - Handles business logic for application settings
- * Implements observable pattern to notify subscribers of data changes
- */
 class SettingsViewModel {
     constructor() {
         this.settings = {
-            refreshInterval: 30, // Default value
-            telegramBotToken: '',
-            telegramChatId: ''
+            refreshInterval: {
+                parseUnReadMessagesinDB: 30,
+                sendUnReadMessagesViaTelebot: 30,
+                replyViaTeleBot: 10
+            },
+            telegram: {
+                botToken: '',
+                chatId: ''
+            }
         };
         this.observers = [];
+        this.isChecking = false; // ID 확인 모드 상태
     }
 
     /**
@@ -40,7 +43,7 @@ class SettingsViewModel {
      * @returns {Promise} - Promise that resolves when settings are loaded
      */
     loadSettings() {
-        return fetch('/loadSettings')
+        return fetch('/api/settings/loadSettings')
             .then(response => response.json())
             .then(data => {
                 this.settings = data;
@@ -48,7 +51,7 @@ class SettingsViewModel {
                 return data;
             })
             .catch(error => {
-                console.error('Error fetching settings:', error);
+                console.error('설정 불러오기 실패:', error);
                 throw error;
             });
     }
@@ -59,12 +62,12 @@ class SettingsViewModel {
      * @returns {Promise} - Promise that resolves when refresh interval is updated
      */
     updateRefreshInterval(interval) {
-        // Validate input
+        // 입력값 검증
         if (!interval || isNaN(interval) || interval < 5) {
             return Promise.reject('5초 이상의 값을 입력해주세요.');
         }
 
-        return fetch('/updateRefreshInterval', {
+        return fetch('/api/settings/updateRefreshInterval', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -74,7 +77,9 @@ class SettingsViewModel {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                this.settings.refreshInterval = interval;
+                this.settings.refreshInterval.parseUnReadMessagesinDB = interval;
+                this.settings.refreshInterval.sendUnReadMessagesViaTelebot = interval;
+                this.settings.refreshInterval.replyViaTeleBot = Math.max(5, Math.floor(interval / 3));
                 this.notifyObservers();
                 return data;
             } else {
@@ -94,7 +99,7 @@ class SettingsViewModel {
             return Promise.reject('텔레그램 봇 토큰과 채팅 ID를 입력해주세요.');
         }
 
-        return fetch('/updateTelegramSettings', {
+        return fetch('/api/settings/updateTelegramSettings', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -104,12 +109,95 @@ class SettingsViewModel {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                this.settings.telegramBotToken = token;
-                this.settings.telegramChatId = chatId;
+                this.settings.telegram.botToken = token;
+                this.settings.telegram.chatId = chatId;
                 this.notifyObservers();
                 return data;
             } else {
                 throw new Error(data.message || '텔레그램 설정 업데이트 실패');
+            }
+        });
+    }
+
+    /**
+     * Start Telegram ID check mode
+     * @param {string} token - Telegram bot token
+     * @returns {Promise} - Promise that resolves when ID check mode is started
+     */
+    startTelegramIdCheck(token) {
+        if (!token) {
+            return Promise.reject('텔레그램 봇 토큰을 입력해주세요.');
+        }
+
+        this.isChecking = true;
+
+        return fetch('/api/settings/startTelegramIdCheck', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ token }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                return data;
+            } else {
+                this.isChecking = false;
+                throw new Error(data.message || '텔레그램 ID 확인 모드 시작 실패');
+            }
+        })
+        .catch(error => {
+            this.isChecking = false;
+            throw error;
+        });
+    }
+
+    /**
+     * Stop Telegram ID check mode
+     * @returns {Promise} - Promise that resolves when ID check mode is stopped
+     */
+    stopTelegramIdCheck() {
+        return fetch('/api/settings/stopTelegramIdCheck', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            this.isChecking = false;
+            if (data.success) {
+                return data;
+            } else {
+                throw new Error(data.message || '텔레그램 ID 확인 모드 중지 실패');
+            }
+        })
+        .catch(error => {
+            this.isChecking = false;
+            throw error;
+        });
+    }
+
+    /**
+     * Send test message via Telegram
+     * @param {string} message - Message to send (optional)
+     * @returns {Promise} - Promise that resolves when test message is sent
+     */
+    sendTestMessage(message = '🔔 이것은 테스트 메시지입니다.') {
+        return fetch('/api/settings/testTelegramMessage', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ message }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                return data;
+            } else {
+                throw new Error(data.message || '테스트 메시지 전송 실패');
             }
         });
     }
@@ -127,7 +215,7 @@ class SettingsViewModel {
      * @returns {number} - Current refresh interval in seconds
      */
     getRefreshInterval() {
-        return this.settings.refreshInterval;
+        return this.settings.refreshInterval.parseUnReadMessagesinDB;
     }
 
     /**
@@ -135,7 +223,7 @@ class SettingsViewModel {
      * @returns {string} - Current Telegram bot token
      */
     getTelegramBotToken() {
-        return this.settings.telegramBotToken;
+        return this.settings.telegram.botToken;
     }
 
     /**
@@ -143,7 +231,15 @@ class SettingsViewModel {
      * @returns {string} - Current Telegram chat ID
      */
     getTelegramChatId() {
-        return this.settings.telegramChatId;
+        return this.settings.telegram.chatId;
+    }
+
+    /**
+     * Check if Telegram ID check mode is active
+     * @returns {boolean} - True if ID check mode is active
+     */
+    isIdCheckActive() {
+        return this.isChecking;
     }
 }
 
