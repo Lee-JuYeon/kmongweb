@@ -4,7 +4,7 @@ from datetime import date
 from static.js.service.message_service import MessageService
 from static.js.service.account_service import AccountService
 
-from utils.telegram_manager.telegram_manager import TelegramManager
+from utils.telegram_manager.legacy_telegram_manager import LegacyTelegramManager
 from utils.selenium_manager.selenium_manager import SeleniumManager
 from utils.gpt_manager.gpt_manager import GPTManager
 from dummy.dummySingleton import DummySingleton
@@ -21,7 +21,7 @@ account_service = AccountService()
 chatGPT = GPTManager()
 selenium = SeleniumManager()
 dummy = DummySingleton()
-telegram = TelegramManager()
+telegram = LegacyTelegramManager()
 
 # [채팅방 목록] 특정 채팅방의 메세지 목록 불러오기
 @message_bp.route('/loadChatHistory/<int:chatroom_id>')
