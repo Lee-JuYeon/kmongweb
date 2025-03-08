@@ -32,8 +32,8 @@ class KmongMessage:
     def get_header(self):
         # ✅ 랜덤한 User-Agent 목록
         USER_AGENTS = [
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
             "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/537.36 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/537.36",
             "Mozilla/5.0 (Linux; Android 11; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.5195.136 Mobile Safari/537.36"
         ]
@@ -49,7 +49,6 @@ class KmongMessage:
         }
         return header
     
-
     def migrationDB(self):
         # 전에 쓰던 DB에서 데이터 모두 가져옴
         legacyDB = dbLib.select_message_list()
@@ -75,8 +74,6 @@ class KmongMessage:
                     password=password,
                     login_cookie=login_cookie
                 ))
-
-
 
     def login(self, userid, passwd):
         header = self.get_header()

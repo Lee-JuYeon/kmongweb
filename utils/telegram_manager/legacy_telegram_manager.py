@@ -1,11 +1,10 @@
 import requests
 import telebot
-import os
 import logging
 import threading
 import time
 import traceback
-from datetime import datetime
+from datetime import datetime, date
 from utils.kmong_checker import dbLib
 from utils.kmong_checker import kmongLib
 from utils.kmong_checker import db_message
@@ -230,6 +229,7 @@ class LegacyTelegramManager:
                 try:
                     user_id = account.get("user_id", "")
                     getEmail = account.get("email", "")
+                    getPassword = account.get("password", "")
 
                     # user_id가 없는 계정은 건너뜀
                     if not user_id:
@@ -237,6 +237,7 @@ class LegacyTelegramManager:
 
                     # 2. user_id로 모든 테이블에 접근하여 seen이 0인 모델을 가져온다.
                     messages = db_message.read_all_messages(table_id=user_id)
+                    logger.info(f"lagacy_telegram_manager, sendNewMessageByTelegram // messages list  데이터 : {user_id}")
 
                     getMessageCount = 0
                     for message in messages:
@@ -249,11 +250,36 @@ class LegacyTelegramManager:
                             result = self.send_message(email=getEmail, messageCount=getMessageCount, message=getMessage)
                             if result:
                                 sent_count += 1
-                                # 메시지 전송 성공 시 seen 상태 업데이트
-                                db_message.update_message(
-                                    table_id=user_id,
-                                    message_id=message.get("idx"),
-                                    seen=1  # 읽음으로 표시
+
+                                # 크몽 웹으로 보내기
+                                from utils.selenium_manager.selenium_manager import SeleniumManager
+                                from model.message_dto import MessageDTO
+
+                                selenium = SeleniumManager()
+
+                                # 1) Login to Kmong
+                                selenium.login(getEmail, getPassword)
+
+                                # 2) Navigate to chatroom
+                                selenium.getClientChatRoom(chatroom_id=user_id, client_id=message.get("client_id", ""))
+
+                                # 3) Create message DTO and send message
+                                dto = MessageDTO(
+                                    admin_id=message.get("admin_id", ""),
+                                    text=getMessage,
+                                    client_id=message.get("client_id", ""),
+                                    sender_id=message.get("sender_id", ""),
+                                    replied_kmong=1,
+                                    replied_telegram=1,
+                                    seen=0,
+                                    kmong_message_id=0,
+                                    date=date.today()
+                                )
+                                
+                                selenium.send_message(
+                                    message=getMessage, 
+                                    dto=dto,
+                                    chatroomID=user_id
                                 )
                 except Exception as e:
                     logger.error(f"lagacy_telegram_manager, sendNewMessageByTelegram // ⛔ 계정 {account.get('email', '알 수 없음')} 처리 중 오류: {str(e)}")

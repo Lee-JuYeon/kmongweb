@@ -100,8 +100,15 @@ class SeleniumManager:
         try:
             self._init_driver()
 
-            self.driver.get("https://kmong.com/login")
-            
+            self.driver.get("https://kmong.com/")
+
+            # 로그인 화면 로딩 대기
+            WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.XPATH, "//*[text()='로그인']"))
+            )
+            login_button = self.driver.find_element(By.XPATH, "//*[text()='로그인']")
+            login_button.click()
+
             # 이메일 입력 필드 대기
             WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((By.NAME, "email"))

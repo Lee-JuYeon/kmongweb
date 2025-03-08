@@ -1,7 +1,7 @@
 {
   "refreshInterval": {
     "parseUnReadMessagesinDB": 75,
-    "sendUnReadMessagesViaTelebot": 75,
+    "sendUnReadMessagesViaTelebot": 25,
     "replyViaTeleBot": 25
   },
   "telegram": {
