@@ -101,7 +101,9 @@ class KmongMessage:
         cookie_str = ''
 
         if status == 1 and msg == "succeed to login":
+
             cookies = res.cookies
+
             cookie_dict = {cookie.name: cookie.value for cookie in cookies}
             cookie_str = json.dumps(cookie_dict)
             check_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')  # 현재 날짜와 시간
@@ -243,4 +245,4 @@ class KmongMessage:
                     except Exception as e:
                         logging.error(f"kmongLib, check_unread_message // ⛔ updateChatroomList 호출 중 오류 발생: {str(e)}")
         return True
-    
+   

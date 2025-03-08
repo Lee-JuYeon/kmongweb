@@ -70,12 +70,6 @@ def init_telegram():
     if not telegram.prepareObserving():
         logger.error("app.py, init_telegram // ⛔ 텔레그램 모니터링 설정에 실패했습니다.")
     
-    # 테스트 메시지 전송 (봇 작동 확인)
-    if telegram.sendDummyMessage():
-        logger.info("app.py, init_telegram // ✅ 텔레그램 봇이 성공적으로 초기화되었습니다.")
-    else:
-        logger.error("app.py, init_telegram // ⛔ 텔레그램 테스트 메시지 전송에 실패했습니다.")
-    
     return telegram
 
 

@@ -240,6 +240,8 @@ class LegacyTelegramManager:
 
                     getMessageCount = 0
                     for message in messages:
+                        logger.info(f"lagacy_telegram_manager, sendNewMessageByTelegram // 메세지 데이터 : {message}")
+
                         if(message.get("seen", 0) == 0):
                             getMessageCount += 1
                             getMessage = message.get("text", "")

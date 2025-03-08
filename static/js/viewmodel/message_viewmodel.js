@@ -150,7 +150,7 @@ class MessageViewModel {
      * @returns {Promise} - Promise that resolves when messages are marked as read
      * @private
      */
-    _markMessagesAsRead(chatroomId) {
+    markMessagesAsRead(chatroomId) {
         const requestData = { chatroom_id: chatroomId };
         return fetch('/api/message/updateClientUnreadMessage', {
             method: "POST",
