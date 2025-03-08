@@ -79,18 +79,26 @@ class SettingsService:
             return False, '유효하지 않은 간격 값입니다. 5초 이상의 값을 입력하세요.'
         
         try:
+            logging.info(f"settings_service.py, update_refresh_interval // 갱신주기 업데이트: {interval}초")
+            
             # 각 간격 업데이트
             self.settings['refreshInterval']['parseUnReadMessagesinDB'] = interval
             self.settings['refreshInterval']['sendUnReadMessagesViaTelebot'] = interval
             self.settings['refreshInterval']['replyViaTeleBot'] = max(5, interval // 3)  # 빠른 작업과 느린 작업 간의 비율 유지
             
+            logging.info(f"settings_service.py, update_refresh_interval // 업데이트된 설정: {self.settings['refreshInterval']}")
+            
             # 설정 저장
             if self._save_settings(self.settings):
+                logging.info("settings_service.py, update_refresh_interval // ✅ 갱신주기 저장 성공")
                 return True, '갱신주기가 업데이트되었습니다.'
             else:
+                logging.error("settings_service.py, update_refresh_interval // ⛔ 갱신주기 저장 실패")
                 return False, '갱신주기 저장 중 오류가 발생했습니다.'
         except Exception as e:
-            print(f"갱신주기 업데이트 중 오류: {e}")
+            logging.error(f"settings_service.py, update_refresh_interval // ⛔ 갱신주기 업데이트 중 오류: {e}")
+            import traceback
+            traceback.print_exc()
             return False, f'갱신주기 업데이트에 실패했습니다: {str(e)}'
     
     def update_telegram_settings(self, token, chat_id):

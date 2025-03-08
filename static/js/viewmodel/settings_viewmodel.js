@@ -56,17 +56,14 @@ class SettingsViewModel {
             });
     }
 
-    /**
-     * Update refresh interval
-     * @param {number} interval - Refresh interval in seconds
-     * @returns {Promise} - Promise that resolves when refresh interval is updated
-     */
     updateRefreshInterval(interval) {
         // 입력값 검증
         if (!interval || isNaN(interval) || interval < 5) {
             return Promise.reject('5초 이상의 값을 입력해주세요.');
         }
-
+    
+        console.log(`settings_viewmodel.js, updateRefreshInterval // 갱신주기 설정 요청: ${interval}초`);
+    
         return fetch('/api/settings/updateRefreshInterval', {
             method: 'POST',
             headers: {
@@ -74,8 +71,12 @@ class SettingsViewModel {
             },
             body: JSON.stringify({ interval: interval }),
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log(`settings_viewmodel.js, updateRefreshInterval // 서버 응답 상태: ${response.status}`);
+            return response.json();
+        })
         .then(data => {
+            console.log(`settings_viewmodel.js, updateRefreshInterval // 서버 응답 데이터:`, data);
             if (data.success) {
                 this.settings.refreshInterval.parseUnReadMessagesinDB = interval;
                 this.settings.refreshInterval.sendUnReadMessagesViaTelebot = interval;

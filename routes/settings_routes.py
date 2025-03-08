@@ -58,20 +58,26 @@ def update_refresh_interval():
         data = request.json
         interval = data.get('interval')
         
+        print(f"settings_routes.py, update_refresh_interval // 요청 데이터: {data}")
+        
         # 입력값 검증
         if not interval or not isinstance(interval, int) or interval < 5:
+            print(f"settings_routes.py, update_refresh_interval // ⛔ 유효하지 않은 간격: {interval}")
             return jsonify({
                 'success': False, 
                 'message': '유효하지 않은 간격 값입니다. 5초 이상의 값을 입력하세요.'
             }), 400
 
         # 설정 업데이트
+        print(f"settings_routes.py, update_refresh_interval // 설정 업데이트 시도: {interval}초")
         success, message = settings_service.update_refresh_interval(interval)
         
         if success:
             # 스케줄러 재설정 - app.py에서 정의된 함수 호출
+            print(f"settings_routes.py, update_refresh_interval // 스케줄러 재설정 시도")
             from app import refresh_scheduler
-            refresh_scheduler()
+            scheduler_result = refresh_scheduler()
+            print(f"settings_routes.py, update_refresh_interval // 스케줄러 재설정 결과: {scheduler_result}")
             
         return jsonify({
             'success': success, 
@@ -80,8 +86,11 @@ def update_refresh_interval():
         })
     
     except Exception as e:
-        print(f"갱신주기 업데이트 중 오류: {e}")
-        return jsonify({'success': False, 'message': f'갱신주기 업데이트에 실패했습니다: {str(e)}'}), 500
+        error_msg = f"갱신주기 업데이트 중 오류: {e}"
+        print(f"settings_routes.py, update_refresh_interval // ⛔ {error_msg}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': error_msg}), 500
 
 @settings_bp.route('/updateTelegramSettings', methods=['POST'])
 def update_telegram_settings():

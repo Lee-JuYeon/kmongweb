@@ -1,8 +1,8 @@
 {
   "refreshInterval": {
-    "parseUnReadMessagesinDB": 35,
-    "sendUnReadMessagesViaTelebot": 35,
-    "replyViaTeleBot": 11
+    "parseUnReadMessagesinDB": 75,
+    "sendUnReadMessagesViaTelebot": 75,
+    "replyViaTeleBot": 25
   },
   "telegram": {
     "botToken": "7811313159:AAE67UxP2UmES54KCA-li5q-M-rgiKUuYWA",
