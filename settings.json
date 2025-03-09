@@ -7,5 +7,10 @@
   "telegram": {
     "botToken": "7811313159:AAE67UxP2UmES54KCA-li5q-M-rgiKUuYWA",
     "chatId": "5789514767"
+  },
+  "chatrooms": {
+    "checked": [
+      43086377
+    ]
   }
 }

@@ -1,9 +1,9 @@
 import SettingsViewModel from './viewmodel/settings_viewmodel.js';
 
 class SettingsUI {
-    constructor() {
-        // Initialize ViewModel
-        this.viewModel = new SettingsViewModel();
+    constructor(settingsViewModel) {
+        // ViewModel 설정
+        this.viewModel = settingsViewModel || new SettingsViewModel();
         
         // DOM elements - Settings dropdown
         this.settingsButton = document.getElementById('settings-button');
@@ -324,6 +324,25 @@ class SettingsUI {
     _handleSettingsUpdate(settings) {
         // Update UI with new settings if needed
         console.log('Settings updated:', settings);
+        
+        // 채팅방 체크박스 상태 업데이트
+        this._updateChatroomCheckboxes(settings.chatrooms?.checked || []);
+    }
+    
+    /**
+     * 채팅방 체크박스 상태 업데이트
+     * @param {Array} checkedChatrooms - 체크된 채팅방 ID 목록
+     * @private
+     */
+    _updateChatroomCheckboxes(checkedChatrooms) {
+        // 모든 채팅방 체크박스 찾기
+        const checkboxes = document.querySelectorAll('.chatroom-checkbox');
+        
+        // 각 체크박스 상태 업데이트
+        checkboxes.forEach(checkbox => {
+            const chatroomId = parseInt(checkbox.id.replace('chatroom-check-', ''));
+            checkbox.checked = checkedChatrooms.includes(chatroomId);
+        });
     }
 
     /**
@@ -340,11 +359,5 @@ class SettingsUI {
             });
     }
 }
-
-// Initialize when page loads
-document.addEventListener('DOMContentLoaded', () => {
-    const settingsUI = new SettingsUI();
-    settingsUI.initialize();
-});
 
 export default SettingsUI;

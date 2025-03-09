@@ -16,6 +16,9 @@ class SettingsService:
             'telegram': {
                 'botToken': '',
                 'chatId': ''
+            },
+            'chatrooms': {
+                'checked': []  # 체크된 채팅방 ID 목록
             }
         }
         # 로깅 설정
@@ -56,6 +59,14 @@ class SettingsService:
             for key in self.default_settings['telegram']:
                 if key not in settings['telegram']:
                     settings['telegram'][key] = self.default_settings['telegram'][key]    
+
+        # chatrooms 설정 체크
+        if 'chatrooms' not in settings:
+            settings['chatrooms'] = self.default_settings['chatrooms']
+        else:
+            for key in self.default_settings['chatrooms']:
+                if key not in settings['chatrooms']:
+                    settings['chatrooms'][key] = self.default_settings['chatrooms'][key]
 
         return settings
   
@@ -120,6 +131,49 @@ class SettingsService:
             print(f"텔레그램 설정 업데이트 중 오류: {e}")
             return False, f'텔레그램 설정 업데이트에 실패했습니다: {str(e)}'
         
+    def update_chatroom_check(self, chatroom_id, is_checked):
+        """특정 채팅방의 체크 상태를 업데이트"""
+        try:
+            # chatrooms.checked 배열이 없으면 초기화
+            if 'chatrooms' not in self.settings:
+                self.settings['chatrooms'] = {'checked': []}
+            elif 'checked' not in self.settings['chatrooms']:
+                self.settings['chatrooms']['checked'] = []
+
+            # checked 목록에서 채팅방 ID 추가 또는 제거
+            checked_list = self.settings['chatrooms']['checked']
+            
+            if is_checked and chatroom_id not in checked_list:
+                checked_list.append(chatroom_id)
+                self.logger.info(f"settings_service.py, update_chatroom_check // ✅ 채팅방 {chatroom_id} 체크 추가")
+            elif not is_checked and chatroom_id in checked_list:
+                checked_list.remove(chatroom_id)
+                self.logger.info(f"settings_service.py, update_chatroom_check // ✅ 채팅방 {chatroom_id} 체크 제거")
+            
+            # 설정 저장
+            if self._save_settings(self.settings):
+                self.logger.info("settings_service.py, update_chatroom_check // ✅ 채팅방 체크 상태 저장 성공")
+                return True, '채팅방 체크 상태가 업데이트되었습니다.'
+            else:
+                self.logger.error("settings_service.py, update_chatroom_check // ⛔ 채팅방 체크 상태 저장 실패")
+                return False, '채팅방 체크 상태 저장 중 오류가 발생했습니다.'
+        except Exception as e:
+            self.logger.error(f"settings_service.py, update_chatroom_check // ⛔ 채팅방 체크 상태 업데이트 중 오류: {e}")
+            import traceback
+            traceback.print_exc()
+            return False, f'채팅방 체크 상태 업데이트에 실패했습니다: {str(e)}'
+    
+    def get_checked_chatrooms(self):
+        """체크된 모든 채팅방 ID 목록 반환"""
+        if 'chatrooms' not in self.settings or 'checked' not in self.settings['chatrooms']:
+            return []
+        
+        return self.settings['chatrooms']['checked']
+    
+    def is_chatroom_checked(self, chatroom_id):
+        """특정 채팅방이 체크되어 있는지 확인"""
+        checked_list = self.get_checked_chatrooms()
+        return chatroom_id in checked_list
 
     def get_telegram_settings(self):
         """텔레그램 설정 가져오기"""

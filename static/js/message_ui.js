@@ -2,8 +2,9 @@
  * Message UI Handler - Manages UI interactions for message and chatroom management
  */
 class MessageUI {
-    constructor(messageViewModel) {
+    constructor(messageViewModel, settingsViewModel) {
         this.viewModel = messageViewModel;
+        this.settingsViewModel = settingsViewModel;
         
         // DOM elements
         this.chatRoomListContainer = document.getElementById('chat-room-list');
@@ -18,6 +19,21 @@ class MessageUI {
         // Subscribe to view model changes
         this.viewModel.addChatroomObserver(this._renderChatrooms.bind(this));
         this.viewModel.addMessageObserver(this._renderMessages.bind(this));
+        
+        // 설정 변경 관찰
+        if (this.settingsViewModel) {
+            this.settingsViewModel.addObserver(this._handleSettingsChanged.bind(this));
+        }
+    }
+
+    /**
+     * 설정 변경 핸들러 - 설정 변경 시 채팅방 목록 다시 렌더링
+     * @param {Object} settings - 변경된 설정 정보
+     * @private
+     */
+    _handleSettingsChanged(settings) {
+        // 체크박스 상태가 변경되었을 가능성이 있으므로 채팅방 목록 다시 렌더링
+        this._renderChatrooms(this.viewModel.getChatrooms());
     }
 
     /**
@@ -74,6 +90,33 @@ class MessageUI {
     }
 
     /**
+     * 채팅방 체크박스 클릭 처리
+     * @param {Event} event - 클릭 이벤트
+     * @param {number} chatroomId - 채팅방 ID
+     * @private
+     */
+    _handleChatroomCheckboxClick(event, chatroomId) {
+        // 이벤트 전파 중지 (채팅방 선택 이벤트 방지)
+        event.stopPropagation();
+        
+        // 체크박스 상태 가져오기
+        const isChecked = event.target.checked;
+        
+        // 설정 업데이트
+        if (this.settingsViewModel) {
+            this.settingsViewModel.updateChatroomCheck(chatroomId, isChecked)
+                .then(() => {
+                    console.log(`채팅방 ${chatroomId} 체크 상태 업데이트 완료: ${isChecked}`);
+                })
+                .catch(error => {
+                    console.error(`채팅방 체크 상태 업데이트 실패:`, error);
+                    // 실패 시 체크박스 상태 원복
+                    event.target.checked = !isChecked;
+                });
+        }
+    }
+
+    /**
      * Render chatrooms in the UI (observer callback)
      * @param {Array} chatrooms - Array of chatroom objects
      * @private
@@ -90,7 +133,32 @@ class MessageUI {
             // Store chatroom data
             chatRoomItem.setAttribute('data-chatroom-id', chatroomData.chatroom_id);
             
+            // Create checkbox container
+            const checkboxContainer = document.createElement('div');
+            checkboxContainer.classList.add('chatroom-checkbox-container');
+            
+            // Create checkbox
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.classList.add('chatroom-checkbox');
+            checkbox.id = `chatroom-check-${chatroomData.chatroom_id}`;
+            
+            // Set checkbox state from settings
+            if (this.settingsViewModel) {
+                checkbox.checked = this.settingsViewModel.isChatroomChecked(chatroomData.chatroom_id);
+            }
+            
+            // Add checkbox event listener
+            checkbox.addEventListener('click', (event) => 
+                this._handleChatroomCheckboxClick(event, chatroomData.chatroom_id)
+            );
+            
+            checkboxContainer.appendChild(checkbox);
+            
             // Email display
+            const emailContainer = document.createElement('div');
+            emailContainer.classList.add('chatroom-content-container');
+            
             const emailElement = document.createElement('div');
             emailElement.classList.add('chat-room-email');
             
@@ -126,11 +194,19 @@ class MessageUI {
             messageElement.classList.add('chat-room-message');
             
             // Add elements to chatroom item
-            chatRoomItem.appendChild(emailElement);
-            chatRoomItem.appendChild(messageElement);
+            emailContainer.appendChild(emailElement);
+            emailContainer.appendChild(messageElement);
             
-            // Add click event
-            chatRoomItem.addEventListener('click', () => this._handleChatroomSelection(chatRoomItem));
+            chatRoomItem.appendChild(checkboxContainer);
+            chatRoomItem.appendChild(emailContainer);
+            
+            // Add click event (전체 아이템 클릭 이벤트는 체크박스 클릭 시 예외 처리)
+            chatRoomItem.addEventListener('click', (event) => {
+                // 체크박스 클릭 이벤트가 아닌 경우에만 채팅방 선택 처리
+                if (!event.target.classList.contains('chatroom-checkbox')) {
+                    this._handleChatroomSelection(chatRoomItem);
+                }
+            });
             
             // Add to list
             this.chatRoomListContainer.appendChild(chatRoomItem);
@@ -236,8 +312,19 @@ class MessageUI {
      * Initialize UI by loading chatrooms
      */
     initialize() {
-        this.viewModel.loadChatrooms()
-            .catch(error => console.error('Error initializing message UI:', error));
+        // 먼저 설정 로드 (체크박스 상태 가져오기 위해)
+        if (this.settingsViewModel) {
+            this.settingsViewModel.loadSettings()
+                .then(() => {
+                    // 설정 로드 후 채팅방 목록 로드
+                    return this.viewModel.loadChatrooms();
+                })
+                .catch(error => console.error('Error initializing message UI:', error));
+        } else {
+            // 설정 ViewModel이 없는 경우 기본 초기화
+            this.viewModel.loadChatrooms()
+                .catch(error => console.error('Error initializing message UI:', error));
+        }
     }
 
     /**

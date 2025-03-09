@@ -9,6 +9,9 @@ class SettingsViewModel {
             telegram: {
                 botToken: '',
                 chatId: ''
+            },
+            chatrooms: {
+                checked: []
             }
         };
         this.observers = [];
@@ -118,6 +121,73 @@ class SettingsViewModel {
                 throw new Error(data.message || '텔레그램 설정 업데이트 실패');
             }
         });
+    }
+
+    /**
+     * Update the check status of a chatroom
+     * @param {number} chatroomId - The chatroom ID
+     * @param {boolean} isChecked - Whether the chatroom is checked
+     * @returns {Promise} - Promise that resolves when the chatroom check status is updated
+     */
+    updateChatroomCheck(chatroomId, isChecked) {
+        if (chatroomId === undefined || chatroomId === null) {
+            return Promise.reject('채팅방 ID가 필요합니다.');
+        }
+
+        return fetch('/api/settings/updateChatroomCheck', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ chatroomId, isChecked }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // 체크된 채팅방 목록 업데이트
+                if (!this.settings.chatrooms) {
+                    this.settings.chatrooms = { checked: [] };
+                }
+                
+                const checkedList = this.settings.chatrooms.checked || [];
+                
+                if (isChecked && !checkedList.includes(chatroomId)) {
+                    checkedList.push(chatroomId);
+                } else if (!isChecked && checkedList.includes(chatroomId)) {
+                    const index = checkedList.indexOf(chatroomId);
+                    if (index !== -1) {
+                        checkedList.splice(index, 1);
+                    }
+                }
+                
+                this.settings.chatrooms.checked = checkedList;
+                this.notifyObservers();
+                return data;
+            } else {
+                throw new Error(data.message || '채팅방 체크 상태 업데이트 실패');
+            }
+        });
+    }
+
+    /**
+     * Get all checked chatroom IDs
+     * @returns {Array} - Array of checked chatroom IDs
+     */
+    getCheckedChatrooms() {
+        if (!this.settings.chatrooms || !this.settings.chatrooms.checked) {
+            return [];
+        }
+        return this.settings.chatrooms.checked;
+    }
+
+    /**
+     * Check if a chatroom is checked
+     * @param {number} chatroomId - The chatroom ID
+     * @returns {boolean} - Whether the chatroom is checked
+     */
+    isChatroomChecked(chatroomId) {
+        const checkedList = this.getCheckedChatrooms();
+        return checkedList.includes(chatroomId);
     }
 
     /**

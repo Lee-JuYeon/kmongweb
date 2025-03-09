@@ -154,6 +154,55 @@ def update_telegram_settings():
         print(f"텔레그램 설정 업데이트 중 오류: {e}")
         return jsonify({'success': False, 'message': f'텔레그램 설정 업데이트에 실패했습니다: {str(e)}'}), 500
 
+# 새로 추가: 채팅방 체크 상태 업데이트 엔드포인트
+@settings_bp.route('/updateChatroomCheck', methods=['POST'])
+def update_chatroom_check():
+    """채팅방 체크 상태 업데이트 엔드포인트"""
+    try:
+        data = request.json
+        chatroom_id = data.get('chatroomId')
+        is_checked = data.get('isChecked', False)
+        
+        # 입력값 검증
+        if chatroom_id is None:
+            return jsonify({
+                'success': False, 
+                'message': '채팅방 ID가 필요합니다.'
+            }), 400
+        
+        # 설정 업데이트
+        success, message = settings_service.update_chatroom_check(chatroom_id, is_checked)
+        
+        return jsonify({
+            'success': success, 
+            'message': message,
+            'chatroomId': chatroom_id,
+            'isChecked': is_checked
+        })
+        
+    except Exception as e:
+        error_msg = f"채팅방 체크 상태 업데이트 중 오류: {e}"
+        print(f"settings_routes.py, update_chatroom_check // ⛔ {error_msg}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': error_msg}), 500
+
+# 새로 추가: 체크된 채팅방 목록 가져오기 엔드포인트
+@settings_bp.route('/getCheckedChatrooms')
+def get_checked_chatrooms():
+    """체크된 채팅방 목록 반환"""
+    try:
+        checked_chatrooms = settings_service.get_checked_chatrooms()
+        return jsonify({
+            'success': True,
+            'chatrooms': checked_chatrooms
+        })
+        
+    except Exception as e:
+        error_msg = f"체크된 채팅방 목록 조회 중 오류: {e}"
+        print(f"settings_routes.py, get_checked_chatrooms // ⛔ {error_msg}")
+        return jsonify({'success': False, 'message': error_msg}), 500
+
 @settings_bp.route('/testTelegramMessage', methods=['POST'])
 def test_telegram_message():
     """텔레그램 봇 테스트 메시지 전송"""

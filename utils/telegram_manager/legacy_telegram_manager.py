@@ -639,31 +639,6 @@ class LegacyTelegramManager:
         thread.start()
         return True
 
-    def sendDummyMessage(self):
-        """
-        테스트용 더미 메시지 전송
-        """
-        if not bot:
-            logger.error("텔레그램 봇이 초기화되지 않았습니다.")
-            return False
-            
-        try:
-            message_text = (
-                "🔔 Kmong 테스트 메시지 🔔\n"
-                f"✉️ test@test.com\n"
-                f"💬 (0): 테스트용 메세지입니다. 시간: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} \n"
-            )
-
-            # 텔레그램 메시지 전송 및 결과 확인
-            sent_message = bot.send_message(self.chat_id, message_text)
-            logger.info(f"테스트 메시지 전송 성공: {sent_message.message_id}")
-            return True
-        except Exception as e:
-            logger.error(f"테스트 메시지 전송 실패: {str(e)}")
-            traceback.print_exc()
-            return False
- 
-
     def replyViaTeleBot(self):
         """
         텔레그램 답장 기능 호출 (기존 메소드와 호환성 유지)

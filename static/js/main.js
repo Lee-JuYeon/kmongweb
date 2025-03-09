@@ -15,12 +15,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const aiReplyViewModel = new AiReplyViewModel();
     const settingsViewModel = new SettingsViewModel();
 
-    
     // Initialize UI handlers
     const accountUI = new AccountUI(accountViewModel);
-    const messageUI = new MessageUI(messageViewModel);
+    // SettingsViewModel을 MessageUI 생성자에 전달 (체크박스 상태 관리용)
+    const messageUI = new MessageUI(messageViewModel, settingsViewModel);
     const aiReplyModal = new AiReplyModal(aiReplyViewModel, messageViewModel);
-    const setttingsUI = new SettingsUI();  
+    const settingsUI = new SettingsUI(settingsViewModel);  // SettingsViewModel 전달
+ 
 
     // Initialize UIs
     accountUI.initialize();
