@@ -8,6 +8,7 @@ from datetime import datetime, date
 from utils.kmong_checker import dbLib
 from utils.kmong_checker import kmongLib
 from utils.kmong_checker import db_message
+from utils.kmong_checker import db_account
 from static.js.service.settings_service import SettingsService
 
 
@@ -182,9 +183,8 @@ class LegacyTelegramManager:
                 return False
         return True  # 봇이 없으면 이미 중지된 것으로 간주
 
-
     # 텔레그램으로 메시지 전송
-    def send_message(self, email, messageCount, message, parse_mode=None):
+    def send_message(self, email, messageCount, messageTotalCount, message, chatroom_id, parse_mode=None):
         if not bot:
             logger.error("lagacy_telegram_manager, send_message // ⛔ 텔레그램 봇이 초기화되지 않았습니다.")
             return False
@@ -194,9 +194,9 @@ class LegacyTelegramManager:
             return False
             
         message_text = (
-            f"🔔 Kmong 새 메세지 알림 🔔\n\n"
-            f"✉️ {email}\n"
-            f"💬 ({messageCount}): {message}"
+            f"🔔 Kmong 새 메세지 알림({chatroom_id}) 🔔\n"
+            f"✉️ {email} ({messageCount}/{messageTotalCount}) \n"
+            f"💬 {message}"
         )
         
         try:
@@ -229,7 +229,6 @@ class LegacyTelegramManager:
                 try:
                     user_id = account.get("user_id", "")
                     getEmail = account.get("email", "")
-                    getPassword = account.get("password", "")
 
                     # user_id가 없는 계정은 건너뜀
                     if not user_id:
@@ -237,50 +236,34 @@ class LegacyTelegramManager:
 
                     # 2. user_id로 모든 테이블에 접근하여 seen이 0인 모델을 가져온다.
                     messages = db_message.read_all_messages(table_id=user_id)
-                    logger.info(f"lagacy_telegram_manager, sendNewMessageByTelegram // messages list  데이터 : {user_id}")
 
-                    getMessageCount = 0
+                    getMessageTotalCount = 0
                     for message in messages:
-                        logger.info(f"lagacy_telegram_manager, sendNewMessageByTelegram // 메세지 데이터 : {message}")
+                        if(message.get("seen", 0) == 0 and message.get("replied_telegram", 0) == 0):
+                            getMessageTotalCount += 1
 
-                        if(message.get("seen", 0) == 0):
+                    for message in messages:
+                        if(message.get("seen", 0) == 0 and message.get("replied_telegram", 0) == 0):
                             getMessageCount += 1
                             getMessage = message.get("text", "")
                             # 3. 메세지 보내기
-                            result = self.send_message(email=getEmail, messageCount=getMessageCount, message=getMessage)
+                            result = self.send_message(
+                                email=getEmail, 
+                                messageCount=getMessageCount, 
+                                messageTotalCount=getMessageTotalCount, 
+                                chatroom_id=user_id,
+                                message=getMessage
+                                )
+
                             if result:
                                 sent_count += 1
-
-                                # 크몽 웹으로 보내기
-                                from utils.selenium_manager.selenium_manager import SeleniumManager
-                                from model.message_dto import MessageDTO
-
-                                selenium = SeleniumManager()
-
-                                # 1) Login to Kmong
-                                selenium.login(getEmail, getPassword)
-
-                                # 2) Navigate to chatroom
-                                selenium.getClientChatRoom(chatroom_id=user_id, client_id=message.get("client_id", ""))
-
-                                # 3) Create message DTO and send message
-                                dto = MessageDTO(
-                                    admin_id=message.get("admin_id", ""),
-                                    text=getMessage,
-                                    client_id=message.get("client_id", ""),
-                                    sender_id=message.get("sender_id", ""),
-                                    replied_kmong=1,
-                                    replied_telegram=1,
-                                    seen=0,
-                                    kmong_message_id=0,
-                                    date=date.today()
+                                # 4. replied_telegram = 1 으로 변경
+                                db_message.update_message(
+                                    table_id=user_id,
+                                    message_id=message.get("idx"),  # idx가 메시지 ID
+                                    replied_telegram=1  # telegram으로 응답 상태를 1로 설정
                                 )
-                                
-                                selenium.send_message(
-                                    message=getMessage, 
-                                    dto=dto,
-                                    chatroomID=user_id
-                                )
+                                logger.info(f"lagacy_telegram_manager, sendNewMessageByTelegram // ✅ 메시지 ID `{message.get('idx')}`의 텔레그램 응답 상태 업데이트 완료")
                 except Exception as e:
                     logger.error(f"lagacy_telegram_manager, sendNewMessageByTelegram // ⛔ 계정 {account.get('email', '알 수 없음')} 처리 중 오류: {str(e)}")
                     continue
@@ -296,8 +279,7 @@ class LegacyTelegramManager:
     def replyByTelegram(self):
         try:
             # 텔레그램에서 답장 확인
-            with self.polling_lock:
-                reply_info = self.listen_for_replies()
+            reply_info = self.listen_for_replies()
             
             if not reply_info:
                 # 새 답장이 없으면 종료
@@ -319,7 +301,11 @@ class LegacyTelegramManager:
             chatroom_tables = db_message.read_all_chatroom_tables()
             
             found = False
-            
+            admin_id = None
+            client_id = None
+            original_message = None
+            found_table_id = None
+
             # 각 채팅방에서 원본 메시지 찾기
             for table_name in chatroom_tables:
                 # 테이블 ID 추출 (chatroom_123 => 123)
@@ -342,7 +328,14 @@ class LegacyTelegramManager:
                         if (message.get('kmong_message_id') == original_message_id or 
                             message.get('idx') == original_message_id):
                             
-                            # 메시지 찾음 - DB 업데이트
+                            # 메시지 찾음 - 상태 업데이트 및 정보 저장
+                            admin_id = message.get('admin_id')
+                            client_id = message.get('client_id')
+                            original_message = message
+                            found_table_id = table_id
+                            found = True
+                            
+                            # 원본 메시지 상태 업데이트
                             db_message.update_message(
                                 table_id=table_id,
                                 message_id=message.get('idx'),
@@ -351,7 +344,6 @@ class LegacyTelegramManager:
                             )
                             
                             logger.info(f"lagacy_telegram_manager, replyByTelegram // ✅ 메시지 상태 업데이트 완료: 테이블 ID {table_id}, 메시지 ID {message.get('idx')}")
-                            found = True
                             break
                     
                     if found:
@@ -486,9 +478,72 @@ class LegacyTelegramManager:
             }
             
             # 로그 출력
-            logger.info(f"답장 수신: {reply_info['text'][:30]}... (ID: {reply_info['message_id']})")
-            logger.debug(f"답장 정보: {reply_info}")
+            logger.info(f"lagacy_telegram_manager, listen_for_replies // 🔍 답장 정보: {reply_info}")
+
+            # 원본 메시지 텍스트 가져오기
+            original_message_text = message.get('reply_to_message', {}).get('text', "")
             
+            # 메타데이터 추출
+            # 원본 메시지에서 이메일과 채팅방 ID 추출
+            # 형식: "🔔 Kmong 새 메세지 알림 🔔\n\n✉️ email@example.com\n💬 (1): 메시지 내용\n\n채팅방 ID: 123"
+
+            import re
+            chatroom_id_match = re.search(r"🔔 Kmong 새 메세지 알림\((\d+)\) 🔔", original_message_text)
+
+            if chatroom_id_match:
+                chatroom_id = int(chatroom_id_match.group(1))
+                
+                # 해당 채팅방의 메시지 가져오기
+                messages = db_message.read_all_messages(table_id=chatroom_id)
+                if messages:
+                    # 최신 메시지에서 필요한 정보 추출
+                    recent_messages = sorted(messages, key=lambda m: m.get('idx', 0), reverse=True)
+                    latest_message = recent_messages[0]
+                    
+                    admin_id = latest_message.get('admin_id')
+                    client_id = latest_message.get('client_id')
+                    
+                    # 새 메시지 DTO 생성
+                    from datetime import date
+                    from model.message_dto import MessageDTO
+                    
+                    reply_dto = MessageDTO(
+                        admin_id=admin_id,
+                        text=reply_info['text'],
+                        client_id=client_id,
+                        sender_id=admin_id,  # 답장은 관리자가 보낸 것으로 설정
+                        replied_kmong=0,     # 아직 크몽에는 반영되지 않음
+                        replied_telegram=1,  # 텔레그램으로 응답함
+                        seen=1,              # 이미 읽은 상태
+                        kmong_message_id=0,  # 크몽 메시지 ID는 0으로 설정
+                        date=date.today()    # 현재 날짜
+                    )
+
+            # 셀레니움 웹으로도 보내기
+            from utils.selenium_manager.selenium_manager import SeleniumManager
+            selenium = SeleniumManager()
+
+            accounts = db_account.read_all_accounts()
+            for account in accounts:
+                if(account.get("user_id", "") == chatroom_id):
+                    # 1) Login to Kmong
+                    selenium.login(
+                        account.get("email"), 
+                        account.get("password")
+                    )
+
+                    # 2) Navigate to chatroom
+                    selenium.getClientChatRoom(chatroom_id=chatroom_id, client_id=client_id)
+
+                    # 3) Create message DTO and send message
+                    selenium.send_message(
+                        message=reply_dto.text, 
+                        dto=reply_dto,
+                        chatroomID=chatroom_id
+                    )
+            
+            logger.info(f"lagacy_telegram_manager, listen_for_replies // ✅ 텔레그램 답장이 DB에 저장되었습니다. 채팅방 ID: {chatroom_id}")
+
             self.is_polling = False
             return reply_info
         except Exception as e:
