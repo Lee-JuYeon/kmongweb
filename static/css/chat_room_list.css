@@ -71,3 +71,11 @@
 .chatroom-checkbox:checked + .chatroom-content-container .chat-room-email {
     color: #4a6cf7; /* 체크된 채팅방의 이메일 색상 변경 */
 }
+
+.chatroom-content-container {
+    flex: 1; /* 남은 공간 모두 차지 */
+    display: flex;
+    flex-direction: column;
+    min-width: 0; /* 텍스트가 overflow될 수 있도록 최소 너비 설정 */
+    overflow: hidden; /* 컨테이너 자체의 overflow 처리 */
+}
