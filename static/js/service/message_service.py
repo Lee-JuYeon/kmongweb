@@ -1,4 +1,4 @@
-import utils.kmong_checker.db_message as db_message
+import utils.kmong_manager.db_message as db_message
 from model.message_dto import MessageDTO
 from datetime import date
 

@@ -1,7 +1,7 @@
 from openai import OpenAI
 from datetime import datetime
 from dotenv import load_dotenv
-from utils.kmong_checker.db_message import read_all_chatroom_tables, read_all_messages
+from utils.kmong_manager.db_message import read_all_chatroom_tables, read_all_messages
 from collections import defaultdict
 import os
 

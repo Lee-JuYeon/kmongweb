@@ -7,8 +7,9 @@ import logging
 
 import utils.kmong_checker.dbLib as dbLib
 import utils.kmong_checker.kmongLib as kmongLib
-import utils.kmong_checker.db_account as db_account
-import utils.kmong_checker.db_message as db_message
+import utils.kmong_manager.kmong_manger as kmongManager
+import utils.kmong_manager.db_account as db_account
+import utils.kmong_manager.db_message as db_message
 from static.js.service.settings_service import SettingsService
 
 
@@ -18,7 +19,6 @@ from routes.message_routes import message_bp
 from routes.settings_routes import settings_bp
 
 from utils.telegram_manager.legacy_telegram_manager import LegacyTelegramManager
-from dummy.dummySingleton import DummySingleton
 
 # 로깅 설정
 logging.basicConfig(
@@ -34,7 +34,8 @@ app.register_blueprint(account_bp)
 app.register_blueprint(message_bp)
 app.register_blueprint(settings_bp)
 
-kmongLibInstance = kmongLib.KmongMessage()
+kmongManager = kmongManager.KmongManager()
+kmong_message = kmongLib.KmongMessage()
 settings_service = SettingsService()
 
 # 텔레그램 매니저 인스턴스 (전역 변수)
@@ -42,7 +43,6 @@ telegram = None
 
 # 텔레그램 관리자 초기화
 def init_telegram():
-    from utils.telegram_manager.legacy_telegram_manager import LegacyTelegramManager
     
     global telegram
     
@@ -74,22 +74,24 @@ def init_telegram():
 
 
 # 크몽에서 새로운 메세지 받아오기
-dummy = DummySingleton()
 def getMessageListFromKmongWeb():
     try:
-        userid = dummy.get_admin_info()['email']
-        passwd = dummy.get_admin_info()['password']
-        login_cookie = dummy.get_admin_info()['login_cookie']
+        row_list = dbLib.select_message_list()
 
-        ret = kmongLibInstance.check_unread_message(userid, passwd, login_cookie)
-        if not ret:
-            logger.info("app.py, getMessageListFromKmongWeb // ⛔ 쿠키로 로그인 실패, 새로 로그인 시도")
-            ret, login_cookie = kmongLibInstance.login(userid, passwd)
-            if ret:
-                kmongLibInstance.check_unread_message(userid, passwd, login_cookie)
-            else:
-                logger.error("app.py, refreshgetMessageListFromKmongWeb_scheduler // ⛔ 크몽 로그인 실패")
-        
+        for row in row_list:
+            userid = row.get("userid", "")
+            passwd = row.get("passwd", "")
+            login_cookie = row.get("login_cookie", "")
+
+            ret = kmong_message.check_unread_message(userid, passwd, login_cookie).get("message_content", "") != ""
+            if not ret:
+                logger.info("app.py, getMessageListFromKmongWeb // ⛔ 쿠키로 로그인 실패, 새로 로그인 시도")
+                ret, login_cookie = kmong_message.login(userid, passwd)
+                if ret:
+                    dto = kmong_message.check_unread_message(userid, passwd, login_cookie)
+                    kmongManager.parsingUnreadMessage(email=userid, pw=passwd, cookie=login_cookie, data=dto)
+                else:
+                    logger.error("app.py, refreshgetMessageListFromKmongWeb_scheduler // ⛔ 크몽 로그인 실패")
         return ret
     except Exception as e:
         logger.error(f"app.py, getMessageListFromKmongWeb // ⛔ 크몽 메시지 확인 중 오류: {str(e)}")
@@ -170,7 +172,7 @@ def init():
         init_telegram()
         
         # 기존DB 마이그레이션
-        kmongLibInstance.migrationDB()
+        kmongManager.migrationDB()
         
         return True
     except Exception as e:

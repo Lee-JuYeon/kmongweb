@@ -7,7 +7,6 @@ from static.js.service.account_service import AccountService
 from utils.telegram_manager.legacy_telegram_manager import LegacyTelegramManager
 from utils.selenium_manager.selenium_manager import SeleniumManager
 from utils.gpt_manager.gpt_manager import GPTManager
-from dummy.dummySingleton import DummySingleton
 
 from model.message_dto import MessageDTO
 
@@ -20,7 +19,6 @@ message_service = MessageService()
 account_service = AccountService()
 chatGPT = GPTManager()
 selenium = SeleniumManager()
-dummy = DummySingleton()
 telegram = LegacyTelegramManager()
 
 # [채팅방 목록] 특정 채팅방의 메세지 목록 불러오기
@@ -160,8 +158,8 @@ def sendMessageInWeb():
 
             if admin_id == account_user_id:
                 # 1) Login to Kmong
-                selenium.login(dummy.get_admin_info()['email'], 
-                                     dummy.get_admin_info()['password'])
+                selenium.login(account['email'], 
+                                     account['password'])
 
                 # 2) Navigate to chatroom
                 selenium.getClientChatRoom(chatroom_id=chatroom_id, client_id=client_id)
@@ -220,8 +218,7 @@ def syncChatHistory():
 
             if admin_id == account_user_id:
                 # Login to Kmong
-                selenium.login(dummy.get_admin_info()['email'], 
-                                     dummy.get_admin_info()['password'])
+                selenium.login(account['email'],account['password'])
 
                 # Navigate to chatroom
                 selenium.getClientChatRoom(chatroom_id=chatroom_id, client_id=client_id)

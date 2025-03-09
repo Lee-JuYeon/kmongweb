@@ -10,7 +10,6 @@ from static.js.service.settings_service import SettingsService
 from utils.telegram_manager.legacy_telegram_manager import LegacyTelegramManager
 from utils.selenium_manager.selenium_manager import SeleniumManager
 from utils.gpt_manager.gpt_manager import GPTManager
-from dummy.dummySingleton import DummySingleton
 
 
 # Blueprint 생성
@@ -23,7 +22,6 @@ settings_service = SettingsService()
 
 chatGPT = GPTManager()
 selenium = SeleniumManager()
-dummy = DummySingleton()
 
 
 # 텔레그램 봇 초기화

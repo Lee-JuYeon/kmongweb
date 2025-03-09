@@ -7,8 +7,9 @@ import traceback
 from datetime import datetime, date
 from utils.kmong_checker import dbLib
 from utils.kmong_checker import kmongLib
-from utils.kmong_checker import db_message
-from utils.kmong_checker import db_account
+from utils.kmong_manager import kmong_manger
+from utils.kmong_manager import db_message
+from utils.kmong_manager import db_account
 from static.js.service.settings_service import SettingsService
 
 
@@ -60,7 +61,7 @@ class LegacyTelegramManager:
         self._initialize_bot()
         
         # kmongLib 인스턴스 생성
-        self.kmongLibInstance = kmongLib.KmongMessage()
+        self.kmongLibInstance = kmong_manger.KmongManager()
     
     # 봇 인스턴스 초기화 메소드
     def _initialize_bot(self):

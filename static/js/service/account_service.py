@@ -1,4 +1,4 @@
-import utils.kmong_checker.db_account as db_account
+import utils.kmong_manager.db_account as db_account
 from model.account_dto import AccountDTO
 
 class AccountService:
